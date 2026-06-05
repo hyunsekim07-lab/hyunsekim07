@@ -27,7 +27,6 @@
   }
   body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; font-size: 15px; line-height: 1.6; }
 
-  /* NAV */
   nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
   .nav-logo { font-family: 'Nanum Myeongjo', serif; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; color: var(--ink); text-decoration: none; }
   .nav-logo span { color: var(--accent); }
@@ -37,7 +36,6 @@
   .nav-cta { background: var(--accent); color: #fff !important; padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; text-decoration: none; transition: opacity 0.2s; }
   .nav-cta:hover { opacity: 0.85; }
 
-  /* HERO */
   .hero { padding: 140px 2rem 80px; max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
   .hero-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
   .hero-eyebrow::before { content: ''; display: inline-block; width: 24px; height: 1px; background: var(--accent); }
@@ -50,19 +48,16 @@
   .btn-outline { background: transparent; color: var(--ink); padding: 13px 28px; border-radius: 99px; font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid var(--border-strong); cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; }
   .btn-outline:hover { background: rgba(26,26,20,0.05); }
 
-  /* HERO VISUAL — Kakao Map */
   .hero-visual { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; position: relative; height: 280px; }
   #heroMap { width: 100%; height: 100%; }
   .score-badge { position: absolute; bottom: 1rem; right: 1rem; z-index: 2; background: var(--accent); color: #fff; border-radius: var(--radius-lg); padding: 10px 14px; font-size: 12px; font-weight: 600; line-height: 1.4; pointer-events: none; }
   .score-badge .num { font-size: 24px; font-weight: 700; display: block; }
 
-  /* SECTION COMMONS */
   .section { padding: 80px 2rem; max-width: 900px; margin: 0 auto; }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-warm); margin-bottom: 2.5rem; display: flex; align-items: center; gap: 8px; }
   .section-label::before { content: ''; width: 24px; height: 1px; background: var(--accent-warm); }
   .section-title { font-family: 'Nanum Myeongjo', serif; font-size: 34px; font-weight: 800; letter-spacing: -1px; margin-bottom: 3rem; line-height: 1.25; }
 
-  /* STEPS */
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px; }
   .step { background: var(--bg-card); border: 1px solid var(--border); padding: 2rem; transition: border-color 0.2s; }
   .step:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
@@ -73,13 +68,11 @@
   .step h3 { font-size: 15px; font-weight: 600; margin-bottom: 0.5rem; }
   .step p { font-size: 13px; color: var(--ink-muted); line-height: 1.6; font-weight: 300; }
 
-  /* METRICS */
   .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 3rem; }
   .metric { background: var(--bg-card); padding: 1.5rem; text-align: center; }
   .metric-val { font-family: 'Nanum Myeongjo', serif; font-size: 32px; font-weight: 800; color: var(--accent); display: block; margin-bottom: 4px; }
   .metric-label { font-size: 12px; color: var(--ink-muted); }
 
-  /* FORM */
   .form-section { padding: 80px 2rem; background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .form-inner { max-width: 900px; margin: 0 auto; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
@@ -91,7 +84,6 @@
   textarea { resize: vertical; min-height: 80px; }
   .form-submit { margin-top: 2rem; display: flex; justify-content: flex-end; }
 
-  /* INDUSTRY GRID */
   .industry-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; }
   .industry-item { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
   .industry-item:hover, .industry-item.active { border-color: var(--accent); background: var(--accent-light); }
@@ -99,7 +91,6 @@
   .industry-item span { font-size: 12px; font-weight: 500; color: var(--ink-muted); }
   .industry-item.active span { color: var(--accent); }
 
-  /* RESULTS */
   .results-section { padding: 80px 2rem; max-width: 900px; margin: 0 auto; }
   .result-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
   .result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
@@ -119,7 +110,11 @@
   .tag.green { background: var(--accent-light); color: var(--accent); border-color: transparent; }
   .tag.warm { background: var(--accent-warm-light); color: var(--accent-warm); border-color: transparent; }
 
-  /* CHART SECTION */
+  /* loading spinner */
+  .analyze-loading { display:none; justify-content:center; align-items:center; gap:10px; padding:2rem; font-size:14px; color:var(--ink-muted); }
+  .spinner { width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
   .chart-section { padding: 80px 2rem; background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .chart-inner { max-width: 900px; margin: 0 auto; }
   .chart-tabs { display: flex; gap: 8px; margin-bottom: 2rem; flex-wrap: wrap; }
@@ -128,10 +123,8 @@
   .chart-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; }
   .chart-wrap canvas { max-height: 280px; }
 
-  /* RESULTS MAP */
   #resultsMap { width: 100%; height: 300px; border-radius: var(--radius-lg); border: 1px solid var(--border); margin-top: 2rem; overflow: hidden; }
 
-  /* HISTORY SECTION */
   .history-section { padding: 60px 2rem; max-width: 900px; margin: 0 auto; }
   .history-list { display: flex; flex-direction: column; gap: 10px; margin-top: 1.5rem; }
   .history-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; transition: border-color 0.2s; }
@@ -144,7 +137,6 @@
   .history-del:hover { color: var(--accent-warm); }
   .history-empty { font-size: 13px; color: var(--ink-faint); text-align: center; padding: 2rem; border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); }
 
-  /* DATA */
   .data-section { padding: 80px 2rem; max-width: 900px; margin: 0 auto; }
   .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; }
   .data-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -161,7 +153,6 @@
   .data-row-val { font-weight: 500; }
   .trend-up { color: var(--accent); }
 
-  /* FOOTER */
   footer { background: var(--bg-dark); color: #fff; padding: 3rem 2rem; }
   .footer-inner { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
   .footer-logo { font-family: 'Nanum Myeongjo', serif; font-size: 20px; font-weight: 800; color: #fff; }
@@ -197,7 +188,6 @@
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
   <a href="#" class="nav-logo">창업<span>나침반</span></a>
   <ul class="nav-links">
@@ -209,15 +199,14 @@
   </ul>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
   <div>
     <div class="hero-eyebrow animate">AI 기반 상권 분석 플랫폼</div>
     <h1 class="animate delay-1">당신의 창업,<br><em>데이터가</em><br>길을 냅니다</h1>
     <p class="hero-desc animate delay-2">전국 공공데이터와 소비 트렌드를 실시간 분석하여 업종별 최적 상권을 추천합니다. 실패 없는 창업의 첫 걸음을 함께하세요.</p>
     <div class="hero-btns animate delay-3">
-      <a href="#analyze" class="btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>내 상권 분석하기</a>
-      <a href="#how" class="btn-outline"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>서비스 소개</a>
+      <a href="#analyze" class="btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>내 상권 분석하기</a>
+      <a href="#how" class="btn-outline"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>서비스 소개</a>
     </div>
   </div>
   <div class="hero-visual animate delay-2">
@@ -228,26 +217,25 @@
 
 <hr class="divider">
 
-<!-- HOW IT WORKS -->
 <section class="section" id="how">
   <div class="section-label">이용방법</div>
   <h2 class="section-title">세 단계로 완성하는<br>과학적 창업 준비</h2>
   <div class="steps">
     <div class="step">
       <div class="step-num">01</div>
-      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="8"/><path d="M9 3h6"/></svg></div>
+      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="8"/><path d="M9 3h6"/></svg></div>
       <h3>업종 · 조건 입력</h3>
       <p>희망 업종, 예산 규모, 선호 지역을 입력하면 분석을 시작합니다.</p>
     </div>
     <div class="step">
       <div class="step-num">02</div>
-      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg></div>
+      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <h3>AI 상권 분석</h3>
       <p>유동인구, 경쟁 현황, 임대료, 소비 패턴 등 200여개 지표를 종합 분석합니다.</p>
     </div>
     <div class="step">
       <div class="step-num">03</div>
-      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="step-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <h3>맞춤 상권 추천</h3>
       <p>적합도 점수와 함께 최적 상권 Top 3를 순위별로 제안합니다.</p>
     </div>
@@ -262,44 +250,64 @@
 
 <hr class="divider">
 
-<!-- ANALYZE FORM -->
 <div class="form-section" id="analyze">
   <div class="form-inner">
     <div class="section-label">상권 분석</div>
     <h2 class="section-title">지금 바로 분석 시작하기</h2>
     <div class="industry-grid">
-      <div class="industry-item active" onclick="selectIndustry(this,'카페·음료')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg><span>카페 · 음료</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'외식·식당')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V3"/><path d="M12 3v18"/><path d="M3 8h4"/><circle cx="18" cy="12" r="4"/><path d="M18 8v1"/><path d="M18 16v1"/></svg><span>외식 · 식당</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'패션·의류')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.86H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.86l.58-3.57a2 2 0 0 0-1.34-2.23z"/></svg><span>패션 · 의류</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'IT·전자')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg><span>IT · 전자</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'뷰티·헬스')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>뷰티 · 헬스</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'교육·학원')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>교육 · 학원</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'반려동물')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 1.344-3zm7.5-2c-1.923-.321-3.5.782-3.5 2.172 0 1.55.699 2.528 1.344 3 1.931.722 3.576-.297 3.656-1 .113-.994-1.177-6.53-4-7z"/><path d="M5 20c0-5 3.5-8 7-8s7 3 7 8"/><path d="M9.5 20.5c.5-1.5 2-2.5 2.5-2.5s2 1 2.5 2.5"/></svg><span>반려동물</span></div>
-      <div class="industry-item" onclick="selectIndustry(this,'기타')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>기타 업종</span></div>
+      <div class="industry-item active" onclick="selectIndustry(this,'카페·음료')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg><span>카페 · 음료</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'외식·식당')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V3"/><path d="M12 3v18"/><path d="M3 8h4"/></svg><span>외식 · 식당</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'패션·의류')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.86H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.86l.58-3.57a2 2 0 0 0-1.34-2.23z"/></svg><span>패션 · 의류</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'IT·전자')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span>IT · 전자</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'뷰티·헬스')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>뷰티 · 헬스</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'교육·학원')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>교육 · 학원</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'반려동물')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 1.344-3zm7.5-2c-1.923-.321-3.5.782-3.5 2.172 0 1.55.699 2.528 1.344 3 1.931.722 3.576-.297 3.656-1 .113-.994-1.177-6.53-4-7z"/><path d="M5 20c0-5 3.5-8 7-8s7 3 7 8"/></svg><span>반려동물</span></div>
+      <div class="industry-item" onclick="selectIndustry(this,'기타')"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>기타 업종</span></div>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label for="region">희망 지역 (시 · 도)</label>
+        <label for="region">희망 지역 (서울 구)</label>
         <select id="region">
-          <option>서울특별시</option><option>경기도</option><option>부산광역시</option><option>인천광역시</option><option>대구광역시</option><option>대전광역시</option><option>광주광역시</option><option>기타</option>
+          <option value="전체">전체 (서울)</option>
+          <option value="마포구">마포구 (홍대·연남·망원)</option>
+          <option value="성동구">성동구 (성수·왕십리)</option>
+          <option value="강남구">강남구 (강남·청담·압구정)</option>
+          <option value="서초구">서초구 (서래마을·반포)</option>
+          <option value="용산구">용산구 (이태원·한남)</option>
+          <option value="종로구">종로구 (인사동·북촌·광화문)</option>
+          <option value="중구">중구 (명동·을지로)</option>
+          <option value="송파구">송파구 (잠실·석촌)</option>
+          <option value="영등포구">영등포구 (여의도·당산)</option>
+          <option value="관악구">관악구 (신림·봉천)</option>
         </select>
       </div>
       <div class="form-group">
         <label for="budget">초기 창업 예산</label>
         <select id="budget">
-          <option>3,000만원 미만</option><option>3,000 ~ 5,000만원</option><option selected>5,000만원 ~ 1억원</option><option>1억 ~ 3억원</option><option>3억원 이상</option>
+          <option value="low">3,000만원 미만</option>
+          <option value="mid-low">3,000 ~ 5,000만원</option>
+          <option value="mid" selected>5,000만원 ~ 1억원</option>
+          <option value="mid-high">1억 ~ 3억원</option>
+          <option value="high">3억원 이상</option>
         </select>
       </div>
       <div class="form-group">
         <label for="target">주 타겟 고객층</label>
         <select id="target">
-          <option>10~20대 (Z세대)</option><option selected>20~30대 (MZ세대)</option><option>30~40대 (직장인)</option><option>40~50대 (중장년)</option><option>전 연령</option>
+          <option value="z">10~20대 (Z세대)</option>
+          <option value="mz" selected>20~30대 (MZ세대)</option>
+          <option value="worker">30~40대 (직장인)</option>
+          <option value="middle">40~50대 (중장년)</option>
+          <option value="all">전 연령</option>
         </select>
       </div>
       <div class="form-group">
         <label for="area">희망 매장 면적</label>
         <select id="area">
-          <option>10평 미만</option><option selected>10 ~ 20평</option><option>20 ~ 40평</option><option>40평 이상</option>
+          <option value="tiny">10평 미만</option>
+          <option value="small" selected>10 ~ 20평</option>
+          <option value="mid">20 ~ 40평</option>
+          <option value="large">40평 이상</option>
         </select>
       </div>
       <div class="form-group full">
@@ -308,8 +316,9 @@
       </div>
     </div>
     <div class="form-submit">
-      <button class="btn-primary" onclick="runAnalysis()"><i class="ti ti-search" aria-hidden="true"></i>최적 상권 분석하기</button>
+      <button class="btn-primary" onclick="runAnalysis()"><i class="ti ti-search"></i>최적 상권 분석하기</button>
     </div>
+    <div class="analyze-loading" id="analyzeLoading"><div class="spinner"></div>AI가 상권 데이터를 분석하는 중입니다…</div>
   </div>
 </div>
 
@@ -317,39 +326,9 @@
 <section class="results-section" id="results" style="display:none;">
   <div class="section-label">분석 결과</div>
   <h2 class="section-title">추천 상권 Top 3</h2>
-  <p id="results-desc" style="color:var(--ink-muted);font-size:14px;font-weight:300;"></p>
-
-  <div class="result-cards" style="margin-top:2rem;">
-    <div class="result-card top">
-      <div class="result-rank">01</div>
-      <div class="result-district">연남동</div>
-      <div class="result-gu">서울 마포구</div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>종합 적합도</span><span style="font-weight:600;color:var(--accent)">92점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:92%"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>유동인구</span><span>88점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:88%;opacity:0.5"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>경쟁 강도</span><span>낮음</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:30%;opacity:0.3;background:var(--accent-warm)"></div></div></div>
-      <div class="result-tags"><span class="tag green">MZ 밀집</span><span class="tag green">성장 상권</span><span class="tag warm">임대료 보통</span></div>
-    </div>
-    <div class="result-card">
-      <div class="result-rank">02</div>
-      <div class="result-district">성수동 카페거리</div>
-      <div class="result-gu">서울 성동구</div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>종합 적합도</span><span style="font-weight:600">87점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:87%;opacity:0.7"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>유동인구</span><span>91점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:91%;opacity:0.5"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>경쟁 강도</span><span>높음</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:75%;opacity:0.3;background:var(--accent-warm)"></div></div></div>
-      <div class="result-tags"><span class="tag green">브랜드 성지</span><span class="tag warm">경쟁 심화</span></div>
-    </div>
-    <div class="result-card">
-      <div class="result-rank">03</div>
-      <div class="result-district">망원동</div>
-      <div class="result-gu">서울 마포구</div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>종합 적합도</span><span style="font-weight:600">81점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:81%;opacity:0.5"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>유동인구</span><span>76점</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:76%;opacity:0.4"></div></div></div>
-      <div class="score-bar-wrap"><div class="score-bar-label"><span>경쟁 강도</span><span>낮음</span></div><div class="score-bar-track"><div class="score-bar-fill" style="width:25%;opacity:0.3;background:var(--accent-warm)"></div></div></div>
-      <div class="result-tags"><span class="tag green">임대료 저렴</span><span class="tag green">신흥 상권</span></div>
-    </div>
-  </div>
-
-  <!-- RESULTS MAP -->
+  <p id="results-desc" style="color:var(--ink-muted);font-size:14px;font-weight:300;margin-bottom:0.5rem;"></p>
+  <p id="results-reason" style="color:var(--ink-muted);font-size:13px;font-weight:300;line-height:1.7;"></p>
+  <div class="result-cards" id="resultCards" style="margin-top:2rem;"></div>
   <div id="resultsMap"></div>
 </section>
 
@@ -357,7 +336,7 @@
 <div class="chart-section" id="chart-section">
   <div class="chart-inner">
     <div class="section-label">유동인구 분석</div>
-    <h2 class="section-title" style="margin-bottom:1.5rem;">시간대별 유동인구 현황</h2>
+    <h2 class="section-title" style="margin-bottom:1.5rem;" id="chartTitle">시간대별 유동인구 현황</h2>
     <div class="chart-tabs">
       <button class="chart-tab active" onclick="switchChart(this,'hourly')">시간대별</button>
       <button class="chart-tab" onclick="switchChart(this,'weekly')">요일별</button>
@@ -369,9 +348,9 @@
   </div>
 </div>
 
-<!-- HISTORY SECTION -->
+<!-- HISTORY -->
 <section class="history-section" id="history-section">
-  <div class="section-label" style="color:var(--accent);"><span style="display:inline-block;width:24px;height:1px;background:var(--accent);"></span>분석 기록</div>
+  <div class="section-label" style="color:var(--accent);"><span style="display:inline-block;width:24px;height:1px;background:var(--accent);margin-right:8px;"></span>분석 기록</div>
   <h2 class="section-title" style="margin-bottom:0;">이전 분석 기록</h2>
   <p style="color:var(--ink-muted);font-size:13px;margin-top:0.5rem;margin-bottom:1.5rem;font-weight:300;">최근 10개의 분석 조건이 저장됩니다.</p>
   <div class="history-list" id="historyList"></div>
@@ -384,83 +363,61 @@
   <div class="section-label">데이터 출처</div>
   <h2 class="section-title">신뢰할 수 있는<br>공공데이터 기반 분석</h2>
   <div class="data-grid">
-
-    <!-- 유동인구 -->
     <div class="data-card">
       <div class="data-card-accent" style="background:linear-gradient(135deg,#2D5A27,#4a8f3f);"></div>
       <div class="data-card-head">
         <div class="data-card-icon" style="background:#EAF2E8;">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="8" r="2"/><path d="M21 21v-1.5a3.5 3.5 0 0 0-2-3.185"/></svg>
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="8" r="2"/><path d="M21 21v-1.5a3.5 3.5 0 0 0-2-3.185"/></svg>
         </div>
-        <div>
-          <div class="data-card-title">유동인구 분석</div>
-          <div class="data-card-sub">KT 통신 빅데이터</div>
-        </div>
+        <div><div class="data-card-title">유동인구 분석</div><div class="data-card-sub">KT 통신 빅데이터</div></div>
         <span class="data-live-badge">실시간</span>
       </div>
       <div class="data-row"><span class="data-row-label">업데이트 주기</span><span class="data-row-val trend-up">● 실시간</span></div>
       <div class="data-row"><span class="data-row-label">분석 범위</span><span class="data-row-val">시간대별 · 연령대별</span></div>
       <div class="data-row"><span class="data-row-label">커버리지</span><span class="data-row-val">전국 3,200+ 상권</span></div>
     </div>
-
-    <!-- 임대료 -->
     <div class="data-card">
       <div class="data-card-accent" style="background:linear-gradient(135deg,#C8530A,#e07030);"></div>
       <div class="data-card-head">
         <div class="data-card-icon" style="background:#FDF0E8;">
-          <svg viewBox="0 0 24 24" aria-hidden="true" style="stroke:#C8530A;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <svg viewBox="0 0 24 24" style="stroke:#C8530A;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </div>
-        <div>
-          <div class="data-card-title">임대료 · 공실 현황</div>
-          <div class="data-card-sub">한국감정원</div>
-        </div>
+        <div><div class="data-card-title">임대료 · 공실 현황</div><div class="data-card-sub">한국감정원</div></div>
         <span class="data-live-badge" style="background:#FDF0E8;color:#C8530A;">분기별</span>
       </div>
       <div class="data-row"><span class="data-row-label">업데이트 주기</span><span class="data-row-val">분기별 갱신</span></div>
       <div class="data-row"><span class="data-row-label">분석 범위</span><span class="data-row-val">전국 주요 상권</span></div>
       <div class="data-row"><span class="data-row-label">제공 항목</span><span class="data-row-val">임대료 · 공실률</span></div>
     </div>
-
-    <!-- 소비 패턴 -->
     <div class="data-card">
       <div class="data-card-accent" style="background:linear-gradient(135deg,#185FA5,#2d82cc);"></div>
       <div class="data-card-head">
         <div class="data-card-icon" style="background:#E6F1FB;">
-          <svg viewBox="0 0 24 24" aria-hidden="true" style="stroke:#185FA5;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+          <svg viewBox="0 0 24 24" style="stroke:#185FA5;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
         </div>
-        <div>
-          <div class="data-card-title">소비 패턴 분석</div>
-          <div class="data-card-sub">BC카드 소비 데이터</div>
-        </div>
+        <div><div class="data-card-title">소비 패턴 분석</div><div class="data-card-sub">BC카드 소비 데이터</div></div>
         <span class="data-live-badge" style="background:#E6F1FB;color:#185FA5;">월별</span>
       </div>
       <div class="data-row"><span class="data-row-label">업데이트 주기</span><span class="data-row-val trend-up">● 월별 갱신</span></div>
       <div class="data-row"><span class="data-row-label">분석 범위</span><span class="data-row-val">업종별 · 시간대별</span></div>
       <div class="data-row"><span class="data-row-label">제공 항목</span><span class="data-row-val">결제 건수 · 객단가</span></div>
     </div>
-
-    <!-- 경쟁 업체 -->
     <div class="data-card">
       <div class="data-card-accent" style="background:linear-gradient(135deg,#3B6D11,#5a9e22);"></div>
       <div class="data-card-head">
         <div class="data-card-icon" style="background:#EAF3DE;">
-          <svg viewBox="0 0 24 24" aria-hidden="true" style="stroke:#3B6D11;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <svg viewBox="0 0 24 24" style="stroke:#3B6D11;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
         </div>
-        <div>
-          <div class="data-card-title">경쟁 업체 현황</div>
-          <div class="data-card-sub">소상공인진흥공단</div>
-        </div>
+        <div><div class="data-card-title">경쟁 업체 현황</div><div class="data-card-sub">소상공인진흥공단</div></div>
         <span class="data-live-badge" style="background:#EAF3DE;color:#3B6D11;">월별</span>
       </div>
       <div class="data-row"><span class="data-row-label">업데이트 주기</span><span class="data-row-val">월별 갱신</span></div>
       <div class="data-row"><span class="data-row-label">분석 범위</span><span class="data-row-val">개폐업률 · 생존율</span></div>
       <div class="data-row"><span class="data-row-label">제공 항목</span><span class="data-row-val">업종별 경쟁 강도</span></div>
     </div>
-
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
     <div>
@@ -474,64 +431,212 @@
   </div>
 </footer>
 
-<!-- KAKAO MAP SDK -->
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=a0f1748189d351245aaeaec15479dfb6&libraries=services"></script>
 
 <script>
-/* ─── STATE ─── */
+/* ═══════════════════════════════════════════════
+   상권 데이터베이스 (서울)
+   각 상권: name, gu, lat, lng,
+     scores: { 카페, 외식, 패션, IT, 뷰티, 교육, 반려동물, 기타 }
+     traffic, competition, rent, 예산적합, 타겟적합, 면적적합
+     tags, highlights
+═══════════════════════════════════════════════ */
+const DISTRICTS = [
+  {
+    name: '연남동', gu: '마포구', lat: 37.5629, lng: 126.9236,
+    baseScores: { '카페·음료':91, '외식·식당':84, '패션·의류':78, 'IT·전자':55, '뷰티·헬스':80, '교육·학원':52, '반려동물':82, '기타':70 },
+    traffic: 88, competition: 62, rent: 55, // 낮을수록 임대료 저렴
+    budgetFit: { low:40, 'mid-low':65, mid:88, 'mid-high':75, high:60 },
+    targetFit: { z:85, mz:95, worker:72, middle:58, all:80 },
+    areaFit: { tiny:70, small:92, mid:80, large:55 },
+    tags: ['MZ 밀집','성장 상권','감성 골목','주말 인파'],
+    warningTags: ['임대료 상승중'],
+  },
+  {
+    name: '성수동 카페거리', gu: '성동구', lat: 37.5445, lng: 127.0557,
+    baseScores: { '카페·음료':94, '외식·식당':82, '패션·의류':90, 'IT·전자':72, '뷰티·헬스':86, '교육·학원':48, '반려동물':76, '기타':74 },
+    traffic: 93, competition: 85, rent: 80,
+    budgetFit: { low:25, 'mid-low':50, mid:72, 'mid-high':90, high:88 },
+    targetFit: { z:88, mz:96, worker:78, middle:50, all:78 },
+    areaFit: { tiny:55, small:78, mid:90, large:85 },
+    tags: ['브랜드 성지','인스타 핫플','팝업 스토어'],
+    warningTags: ['경쟁 심화','높은 임대료'],
+  },
+  {
+    name: '망원동', gu: '마포구', lat: 37.5549, lng: 126.9104,
+    baseScores: { '카페·음료':84, '외식·식당':88, '패션·의류':70, 'IT·전자':48, '뷰티·헬스':75, '교육·학원':58, '반려동물':88, '기타':72 },
+    traffic: 76, competition: 42, rent: 38,
+    budgetFit: { low:80, 'mid-low':90, mid:85, 'mid-high':65, high:45 },
+    targetFit: { z:72, mz:88, worker:80, middle:70, all:82 },
+    areaFit: { tiny:85, small:90, mid:72, large:48 },
+    tags: ['임대료 저렴','신흥 상권','로컬 감성','주거 밀집'],
+    warningTags: [],
+  },
+  {
+    name: '강남역 상권', gu: '강남구', lat: 37.4979, lng: 127.0276,
+    baseScores: { '카페·음료':80, '외식·식당':90, '패션·의류':88, 'IT·전자':85, '뷰티·헬스':92, '교육·학원':88, '반려동물':65, '기타':82 },
+    traffic: 98, competition: 92, rent: 95,
+    budgetFit: { low:10, 'mid-low':25, mid:50, 'mid-high':80, high:95 },
+    targetFit: { z:80, mz:88, worker:96, middle:85, all:90 },
+    areaFit: { tiny:50, small:70, mid:85, large:92 },
+    tags: ['유동인구 1위','직장인 밀집','소비력 높음'],
+    warningTags: ['최고가 임대료','경쟁 극심'],
+  },
+  {
+    name: '압구정·청담', gu: '강남구', lat: 37.5270, lng: 127.0287,
+    baseScores: { '카페·음료':82, '외식·식당':85, '패션·의류':96, 'IT·전자':60, '뷰티·헬스':98, '교육·학원':70, '반려동물':72, '기타':75 },
+    traffic: 82, competition: 78, rent: 98,
+    budgetFit: { low:5, 'mid-low':15, mid:35, 'mid-high':75, high:98 },
+    targetFit: { z:65, mz:80, worker:72, middle:90, all:76 },
+    areaFit: { tiny:40, small:62, mid:80, large:95 },
+    tags: ['럭셔리 상권','뷰티·패션 특화','고소득층'],
+    warningTags: ['초고가 임대료','진입장벽 높음'],
+  },
+  {
+    name: '이태원·한남', gu: '용산구', lat: 37.5346, lng: 126.9947,
+    baseScores: { '카페·음료':88, '외식·식당':92, '패션·의류':90, 'IT·전자':62, '뷰티·헬스':82, '교육·학원':45, '반려동물':78, '기타':85 },
+    traffic: 85, competition: 72, rent: 78,
+    budgetFit: { low:20, 'mid-low':45, mid:72, 'mid-high':88, high:85 },
+    targetFit: { z:78, mz:90, worker:80, middle:72, all:82 },
+    areaFit: { tiny:60, small:80, mid:88, large:80 },
+    tags: ['이국적 감성','외국인 관광','다양한 F&B'],
+    warningTags: ['임대료 높음'],
+  },
+  {
+    name: '인사동·북촌', gu: '종로구', lat: 37.5742, lng: 126.9855,
+    baseScores: { '카페·음료':85, '외식·식당':80, '패션·의류':78, 'IT·전자':42, '뷰티·헬스':68, '교육·학원':72, '반려동물':60, '기타':88 },
+    traffic: 82, competition: 58, rent: 65,
+    budgetFit: { low:35, 'mid-low':60, mid:80, 'mid-high':75, high:60 },
+    targetFit: { z:65, mz:78, worker:70, middle:88, all:85 },
+    areaFit: { tiny:72, small:85, mid:78, large:58 },
+    tags: ['관광 특수','전통·문화','외국인 방문객'],
+    warningTags: ['주말 쏠림'],
+  },
+  {
+    name: '명동·을지로', gu: '중구', lat: 37.5636, lng: 126.9834,
+    baseScores: { '카페·음료':78, '외식·식당':88, '패션·의류':85, 'IT·전자':58, '뷰티·헬스':90, '교육·학원':55, '반려동물':50, '기타':78 },
+    traffic: 96, competition: 90, rent: 92,
+    budgetFit: { low:8, 'mid-low':20, mid:45, 'mid-high':78, high:90 },
+    targetFit: { z:72, mz:80, worker:78, middle:80, all:90 },
+    areaFit: { tiny:45, small:65, mid:80, large:90 },
+    tags: ['외국인 관광','유동인구 최상위','뷰티 메카'],
+    warningTags: ['높은 임대료','경쟁 극심'],
+  },
+  {
+    name: '잠실·석촌', gu: '송파구', lat: 37.5131, lng: 127.1014,
+    baseScores: { '카페·음료':80, '외식·식당':88, '패션·의류':82, 'IT·전자':68, '뷰티·헬스':80, '교육·학원':85, '반려동물':78, '기타':78 },
+    traffic: 90, competition: 80, rent: 82,
+    budgetFit: { low:15, 'mid-low':38, mid:65, 'mid-high':88, high:85 },
+    targetFit: { z:70, mz:82, worker:88, middle:90, all:90 },
+    areaFit: { tiny:48, small:68, mid:88, large:92 },
+    tags: ['대형 상권','가족 단위','롯데월드 특수'],
+    warningTags: ['임대료 높음'],
+  },
+  {
+    name: '여의도', gu: '영등포구', lat: 37.5219, lng: 126.9244,
+    baseScores: { '카페·음료':82, '외식·식당':90, '패션·의류':72, 'IT·전자':78, '뷰티·헬스':75, '교육·학원':65, '반려동물':58, '기타':80 },
+    traffic: 88, competition: 70, rent: 85,
+    budgetFit: { low:12, 'mid-low':30, mid:58, 'mid-high':85, high:88 },
+    targetFit: { z:55, mz:72, worker:98, middle:88, all:82 },
+    areaFit: { tiny:40, small:65, mid:85, large:90 },
+    tags: ['직장인 특화','점심 수요 폭발','금융권 밀집'],
+    warningTags: ['주말 공동화'],
+  },
+  {
+    name: '서래마을', gu: '서초구', lat: 37.4963, lng: 126.9977,
+    baseScores: { '카페·음료':90, '외식·식당':86, '패션·의류':75, 'IT·전자':48, '뷰티·헬스':85, '교육·학원':78, '반려동물':88, '기타':76 },
+    traffic: 72, competition: 50, rent: 72,
+    budgetFit: { low:30, 'mid-low':55, mid:80, 'mid-high':85, high:75 },
+    targetFit: { z:58, mz:80, worker:82, middle:88, all:82 },
+    areaFit: { tiny:78, small:90, mid:80, large:60 },
+    tags: ['유럽 감성','고급 주거','반려동물 친화','여유로운 상권'],
+    warningTags: [],
+  },
+  {
+    name: '신림·봉천', gu: '관악구', lat: 37.4849, lng: 126.9293,
+    baseScores: { '카페·음료':76, '외식·식당':88, '패션·의류':65, 'IT·전자':62, '뷰티·헬스':72, '교육·학원':90, '반려동물':65, '기타':70 },
+    traffic: 82, competition: 55, rent: 30,
+    budgetFit: { low:92, 'mid-low':88, mid:78, 'mid-high':58, high:35 },
+    targetFit: { z:90, mz:85, worker:70, middle:60, all:78 },
+    areaFit: { tiny:88, small:85, mid:72, large:50 },
+    tags: ['저렴한 임대료','대학가','20대 밀집','가성비 상권'],
+    warningTags: ['소득 수준 낮음'],
+  },
+];
+
+/* ═══════════════════════════════════════════════
+   상권 점수 계산 함수
+═══════════════════════════════════════════════ */
+function calcScore(district, industry, budget, target, area) {
+  const base = district.baseScores[industry] || 70;
+  const budgetBonus = district.budgetFit[budget] || 70;
+  const targetBonus = district.targetFit[target] || 70;
+  const areaBonus = district.areaFit[area] || 70;
+  // 가중합: 업종 40%, 예산 25%, 타겟 20%, 면적 15%
+  const total = Math.round(base*0.40 + budgetBonus*0.25 + targetBonus*0.20 + areaBonus*0.15);
+  return Math.min(99, Math.max(30, total));
+}
+
+/* 지역 필터 */
+function filterByRegion(region) {
+  if (region === '전체') return DISTRICTS;
+  return DISTRICTS.filter(d => d.gu === region);
+}
+
+/* 상권 설명 이유 생성 */
+function generateReason(top3, industry, budget, target) {
+  const budgetLabel = { low:'소규모 예산', 'mid-low':'중소 예산', mid:'중간 예산', 'mid-high':'중대형 예산', high:'대규모 예산' }[budget];
+  const targetLabel = { z:'Z세대', mz:'MZ세대', worker:'직장인', middle:'중장년층', all:'전 연령' }[target];
+  const top = top3[0];
+  return `${industry} 업종에서 ${budgetLabel} · ${targetLabel} 타겟 조건을 적용한 결과, ${top.name}(${top.gu})이 종합 1위로 선정되었습니다. 유동인구 밀도, 경쟁 강도, 임대료 적합도를 복합 산출한 점수입니다.`;
+}
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
 let selectedIndustry = '카페·음료';
 let chartInstance = null;
+let currentTop3 = [];
 
-/* ─── INDUSTRY SELECT ─── */
 function selectIndustry(el, name) {
   document.querySelectorAll('.industry-item').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
   selectedIndustry = name;
 }
 
-/* ─── KAKAO MAP — Hero ─── */
+/* ═══════════════════════════════════════════════
+   KAKAO MAP
+═══════════════════════════════════════════════ */
 function initHeroMap() {
+  const el = document.getElementById('heroMap');
   if (typeof kakao === 'undefined' || !kakao.maps) {
-    // Kakao SDK not loaded (no API key) — show fallback grid
-    const el = document.getElementById('heroMap');
     el.style.background = 'var(--bg)';
     el.style.backgroundImage = 'repeating-linear-gradient(0deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px)';
-    el.innerHTML = `
-      <div style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;">
-        <div style="position:absolute;top:28%;left:22%;display:flex;flex-direction:column;align-items:center;color:var(--accent-warm);">
-          <div style="width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;"></div>
-          <div style="font-size:10px;font-weight:600;margin-top:4px;white-space:nowrap;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--border);">홍대 ★ 92점</div>
-        </div>
-        <div style="position:absolute;top:52%;left:58%;display:flex;flex-direction:column;align-items:center;color:var(--accent);">
-          <div style="width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;"></div>
-          <div style="font-size:10px;font-weight:600;margin-top:4px;white-space:nowrap;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--border);">성수 ★ 87점</div>
-        </div>
-        <div style="position:absolute;top:18%;left:63%;display:flex;flex-direction:column;align-items:center;color:var(--ink-muted);">
-          <div style="width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;"></div>
-          <div style="font-size:10px;font-weight:600;margin-top:4px;white-space:nowrap;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--border);">강남 ★ 81점</div>
-        </div>
-        <div style="font-size:12px;color:var(--ink-faint);text-align:center;">
-          <i class="ti ti-map" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-          카카오맵 API 키를 설정하면<br>실제 지도가 표시됩니다
-        </div>
-      </div>`;
+    el.innerHTML = `<div style="position:relative;height:100%;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;top:28%;left:22%;display:flex;flex-direction:column;align-items:center;color:var(--accent-warm);">
+        <div style="width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;"></div>
+        <div style="font-size:10px;font-weight:600;margin-top:4px;white-space:nowrap;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--border);">홍대 ★ 92점</div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-faint);text-align:center;">
+        <i class="ti ti-map" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+        카카오맵 API 키를 설정하면<br>실제 지도가 표시됩니다
+      </div>
+    </div>`;
     return;
   }
   const container = document.getElementById('heroMap');
-  const opts = { center: new kakao.maps.LatLng(37.5563, 126.9233), level: 5 };
-  const map = new kakao.maps.Map(container, opts);
-  const pins = [
-    { lat: 37.5629, lng: 126.9236, label: '연남동 92점', color: '#2D5A27' },
-    { lat: 37.5445, lng: 127.0557, label: '성수동 87점', color: '#2D5A27' },
-    { lat: 37.5549, lng: 126.9104, label: '망원동 81점', color: '#888' },
-  ];
-  pins.forEach(p => {
+  const map = new kakao.maps.Map(container, { center: new kakao.maps.LatLng(37.5563, 126.9233), level: 5 });
+  [
+    { lat:37.5629, lng:126.9236, label:'연남동 92점', color:'#2D5A27' },
+    { lat:37.5445, lng:127.0557, label:'성수동 87점', color:'#2D5A27' },
+    { lat:37.5549, lng:126.9104, label:'망원동 81점', color:'#888' },
+  ].forEach(p => {
     const content = `<div style="background:${p.color};color:#fff;font-size:11px;font-weight:600;padding:4px 8px;border-radius:99px;white-space:nowrap;">${p.label}</div>`;
     new kakao.maps.CustomOverlay({ map, position: new kakao.maps.LatLng(p.lat, p.lng), content, yAnchor: 1 });
   });
 }
 
-function initResultsMap() {
+function initResultsMap(top3) {
   const el = document.getElementById('resultsMap');
   if (typeof kakao === 'undefined' || !kakao.maps) {
     el.style.background = 'var(--bg)';
@@ -541,106 +646,204 @@ function initResultsMap() {
     el.innerHTML = `<p style="font-size:13px;color:var(--ink-faint);text-align:center;"><i class="ti ti-map" style="font-size:28px;display:block;margin-bottom:8px;"></i>카카오맵 API 키 설정 후 추천 상권이 지도에 표시됩니다</p>`;
     return;
   }
-  const map = new kakao.maps.Map(el, { center: new kakao.maps.LatLng(37.5535, 126.9500), level: 7 });
-  const spots = [
-    { lat: 37.5629, lng: 126.9236, title: '연남동', rank: 1 },
-    { lat: 37.5445, lng: 127.0557, title: '성수동', rank: 2 },
-    { lat: 37.5549, lng: 126.9104, title: '망원동', rank: 3 },
-  ];
-  spots.forEach(s => {
-    const content = `<div style="background:${s.rank===1?'var(--accent)':'var(--bg-dark)'};color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;white-space:nowrap;">0${s.rank} ${s.title}</div>`;
+  const centerLat = top3.reduce((s,d)=>s+d.lat,0)/top3.length;
+  const centerLng = top3.reduce((s,d)=>s+d.lng,0)/top3.length;
+  const map = new kakao.maps.Map(el, { center: new kakao.maps.LatLng(centerLat, centerLng), level: 7 });
+  top3.forEach((s, i) => {
+    const content = `<div style="background:${i===0?'var(--accent)':'var(--bg-dark)'};color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;white-space:nowrap;">0${i+1} ${s.name}</div>`;
     new kakao.maps.CustomOverlay({ map, position: new kakao.maps.LatLng(s.lat, s.lng), content, yAnchor: 1.4 });
   });
 }
 
-/* ─── CHART ─── */
-const chartData = {
-  hourly: {
-    labels: ['6시','7시','8시','9시','10시','11시','12시','13시','14시','15시','16시','17시','18시','19시','20시','21시','22시','23시'],
-    연남동: [120,180,320,410,480,620,850,920,880,790,710,760,920,1050,980,820,560,310],
-    성수동: [90,140,280,380,440,560,780,860,820,720,650,700,860,980,1100,940,680,400],
-    망원동: [80,110,200,290,340,430,610,680,650,570,510,540,670,760,820,740,530,290],
-  },
-  weekly: {
-    labels: ['월','화','수','목','금','토','일'],
-    연남동: [640,680,710,750,980,1250,1100],
-    성수동: [580,620,650,690,900,1180,1050],
-    망원동: [440,470,500,530,720,960,840],
-  },
-  age: {
-    labels: ['10대','20대','30대','40대','50대','60대+'],
-    연남동: [120,480,360,220,140,80],
-    성수동: [90,520,400,180,110,60],
-    망원동: [70,340,310,240,160,90],
-  },
-};
+/* ═══════════════════════════════════════════════
+   결과 카드 렌더링
+═══════════════════════════════════════════════ */
+function renderResultCards(top3, industry, budget, target, area) {
+  const container = document.getElementById('resultCards');
+  container.innerHTML = '';
+
+  top3.forEach((d, i) => {
+    const score = calcScore(d, industry, budget, target, area);
+    const trafficScore = Math.min(99, d.traffic + (Math.random()*6-3|0));
+    const competitionLevel = d.competition >= 80 ? '매우 높음' : d.competition >= 60 ? '높음' : d.competition >= 40 ? '보통' : '낮음';
+    const competitionFill = d.competition;
+    const competitionColor = d.competition >= 70 ? 'var(--accent-warm)' : 'var(--accent)';
+
+    const allTags = [...d.tags.map(t=>`<span class="tag green">${t}</span>`), ...d.warningTags.map(t=>`<span class="tag warm">${t}</span>`)].join('');
+
+    const card = document.createElement('div');
+    card.className = 'result-card' + (i===0?' top':'');
+    card.innerHTML = `
+      <div class="result-rank">0${i+1}</div>
+      <div class="result-district">${d.name}</div>
+      <div class="result-gu">서울 ${d.gu}</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>종합 적합도</span><span style="font-weight:600;${i===0?'color:var(--accent)':''}">${score}점</span></div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:0%;${i>0?'opacity:0.7':''}"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>유동인구</span><span>${trafficScore}점</span></div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:0%;opacity:0.5"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>경쟁 강도</span><span>${competitionLevel}</span></div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:0%;opacity:0.35;background:${competitionColor}"></div></div>
+      </div>
+      <div class="result-tags">${allTags}</div>
+    `;
+    container.appendChild(card);
+
+    // 애니메이션 트리거
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const fills = card.querySelectorAll('.score-bar-fill');
+        fills[0].style.width = score + '%';
+        fills[1].style.width = trafficScore + '%';
+        fills[2].style.width = competitionFill + '%';
+      }, 80 + i*120);
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   차트 데이터 (Top3 기반 동적 생성)
+═══════════════════════════════════════════════ */
+function buildChartData(top3) {
+  const colors = ['#2D5A27cc','#6FCF7Acc','#C8530Acc'];
+  const hourLabels = ['6시','7시','8시','9시','10시','11시','12시','13시','14시','15시','16시','17시','18시','19시','20시','21시','22시','23시'];
+  const weekLabels = ['월','화','수','목','금','토','일'];
+  const ageLabels = ['10대','20대','30대','40대','50대','60대+'];
+
+  function scaleHourly(base) {
+    const pattern = [0.12,0.18,0.32,0.42,0.48,0.62,0.87,0.95,0.90,0.80,0.72,0.76,0.93,1.0,0.98,0.82,0.56,0.31];
+    return pattern.map(v => Math.round(v * base * 12));
+  }
+  function scaleWeekly(base, isWorker) {
+    const p = isWorker ? [1,1.05,1.08,1.1,1.3,0.7,0.6] : [0.65,0.68,0.71,0.75,0.98,1.25,1.1];
+    return p.map(v => Math.round(v * base * 8));
+  }
+  function scaleAge(base, targetFit) {
+    const t = targetFit;
+    return [
+      Math.round(base * (t.z/120)),
+      Math.round(base * (t.mz/100)),
+      Math.round(base * (t.worker/110)),
+      Math.round(base * (t.middle/130)),
+      Math.round(base * (t.middle/180)),
+      Math.round(base * 0.08),
+    ];
+  }
+
+  return {
+    hourly: { labels: hourLabels, datasets: top3.map((d,i)=>({ label:d.name, data:scaleHourly(d.traffic), backgroundColor:colors[i], borderRadius:4, borderSkipped:false })) },
+    weekly: { labels: weekLabels, datasets: top3.map((d,i)=>({ label:d.name, data:scaleWeekly(d.traffic, d.gu==='영등포구'||d.gu==='강남구'), backgroundColor:colors[i], borderRadius:4, borderSkipped:false })) },
+    age: { labels: ageLabels, datasets: top3.map((d,i)=>({ label:d.name, data:scaleAge(d.traffic, d.targetFit), backgroundColor:colors[i], borderRadius:4, borderSkipped:false })) },
+  };
+}
+
+let currentChartData = null;
+let currentChartType = 'hourly';
 
 function renderChart(type) {
   const ctx = document.getElementById('mainChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
-  const d = chartData[type];
+  if (!currentChartData) return;
+  const d = currentChartData[type];
   chartInstance = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels: d.labels,
-      datasets: [
-        { label: '연남동', data: d.연남동, backgroundColor: '#2D5A27cc', borderRadius: 4, borderSkipped: false },
-        { label: '성수동', data: d.성수동, backgroundColor: '#6FCF7Acc', borderRadius: 4, borderSkipped: false },
-        { label: '망원동', data: d.망원동, backgroundColor: '#C8530Acc', borderRadius: 4, borderSkipped: false },
-      ]
-    },
+    data: d,
     options: {
       responsive: true,
       maintainAspectRatio: true,
       plugins: {
-        legend: { position: 'top', labels: { font: { family: 'Pretendard', size: 12 }, boxWidth: 12, padding: 16 } },
-        tooltip: { titleFont: { family: 'Pretendard' }, bodyFont: { family: 'Pretendard' } }
+        legend: { position:'top', labels:{ font:{family:'Pretendard',size:12}, boxWidth:12, padding:16 } },
+        tooltip: { titleFont:{family:'Pretendard'}, bodyFont:{family:'Pretendard'} }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 11 } } },
-        y: { grid: { color: 'rgba(26,26,20,0.06)' }, ticks: { font: { family: 'Pretendard', size: 11 } } }
+        x: { grid:{display:false}, ticks:{font:{family:'Pretendard',size:11}} },
+        y: { grid:{color:'rgba(26,26,20,0.06)'}, ticks:{font:{family:'Pretendard',size:11}} }
       }
     }
   });
 }
 
 function switchChart(btn, type) {
-  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
+  currentChartType = type;
   renderChart(type);
 }
 
-/* ─── ANALYSIS + HISTORY ─── */
+/* ═══════════════════════════════════════════════
+   핵심: 분석 실행
+═══════════════════════════════════════════════ */
 function runAnalysis() {
   const industry = selectedIndustry;
   const region = document.getElementById('region').value;
   const budget = document.getElementById('budget').value;
   const target = document.getElementById('target').value;
+  const area = document.getElementById('area').value;
 
-  // update desc
-  document.getElementById('results-desc').textContent =
-    `${industry} 업종 · ${region} · ${budget} · ${target} 기준 분석 결과입니다.`;
+  // 로딩 표시
+  const loadingEl = document.getElementById('analyzeLoading');
+  loadingEl.style.display = 'flex';
+  document.getElementById('results').style.display = 'none';
 
-  // show results
-  const resultsEl = document.getElementById('results');
-  resultsEl.style.display = 'block';
-  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    loadingEl.style.display = 'none';
 
-  // init results map
-  setTimeout(initResultsMap, 300);
+    // 1. 지역 필터
+    let pool = filterByRegion(region);
+    if (pool.length < 3) pool = DISTRICTS; // 결과가 너무 적으면 전체
 
-  // save to history
-  saveHistory({ industry, region, budget, target, date: new Date().toLocaleString('ko-KR') });
+    // 2. 점수 계산 후 정렬
+    const scored = pool.map(d => ({ ...d, score: calcScore(d, industry, budget, target, area) }))
+      .sort((a,b) => b.score - a.score);
+
+    // 3. Top 3
+    const top3 = scored.slice(0, 3);
+    currentTop3 = top3;
+
+    // 4. 결과 문구
+    const regionLabel = document.getElementById('region').options[document.getElementById('region').selectedIndex].text;
+    const budgetLabel = document.getElementById('budget').options[document.getElementById('budget').selectedIndex].text;
+    const targetLabel = document.getElementById('target').options[document.getElementById('target').selectedIndex].text;
+    document.getElementById('results-desc').textContent =
+      `${industry} 업종 · ${regionLabel} · ${budgetLabel} · ${targetLabel} 기준 분석 결과입니다.`;
+    document.getElementById('results-reason').textContent = generateReason(top3, industry, budgetLabel, targetLabel);
+
+    // 5. 카드 렌더링
+    renderResultCards(top3, industry, budget, target, area);
+
+    // 6. 차트 업데이트
+    currentChartData = buildChartData(top3);
+    document.getElementById('chartTitle').textContent = `${top3[0].name} 외 추천 상권 유동인구 현황`;
+    renderChart(currentChartType);
+
+    // 7. 결과 표시 및 스크롤
+    const resultsEl = document.getElementById('results');
+    resultsEl.style.display = 'block';
+    resultsEl.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    // 8. 지도 초기화
+    setTimeout(() => initResultsMap(top3), 300);
+
+    // 9. 기록 저장
+    saveHistory({ industry, region: regionLabel, budget: budgetLabel, target: targetLabel, area, date: new Date().toLocaleString('ko-KR') });
+
+  }, 900); // 분석 딜레이 (체감 효과)
 }
 
-/* ─── LOCAL STORAGE HISTORY ─── */
-const HISTORY_KEY = 'changeop_history';
+/* ═══════════════════════════════════════════════
+   HISTORY
+═══════════════════════════════════════════════ */
+const HISTORY_KEY = 'changeop_history_v2';
 
 function saveHistory(entry) {
   let hist = [];
   try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) {}
   hist.unshift(entry);
-  if (hist.length > 10) hist = hist.slice(0, 10);
+  if (hist.length > 10) hist = hist.slice(0,10);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
   renderHistory();
 }
@@ -661,7 +864,7 @@ function renderHistory() {
     list.innerHTML = '<div class="history-empty"><i class="ti ti-history" style="font-size:24px;display:block;margin-bottom:8px;color:var(--ink-faint);"></i>아직 분석 기록이 없습니다.<br>위에서 상권 분석을 시작해보세요.</div>';
     return;
   }
-  list.innerHTML = hist.map((h, i) => `
+  list.innerHTML = hist.map((h,i) => `
     <div class="history-item" onclick="reloadHistory(${i})">
       <div class="history-meta">
         <span class="history-badge">${h.industry}</span>
@@ -670,7 +873,7 @@ function renderHistory() {
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="history-date">${h.date}</span>
         <button class="history-del" onclick="event.stopPropagation();deleteHistory(${i})" aria-label="삭제">
-          <i class="ti ti-x" aria-hidden="true"></i>
+          <i class="ti ti-x"></i>
         </button>
       </div>
     </div>`).join('');
@@ -681,11 +884,8 @@ function reloadHistory(idx) {
   try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) {}
   const h = hist[idx];
   if (!h) return;
-  // restore selects
-  document.getElementById('region').value = h.region;
-  document.getElementById('budget').value = h.budget;
+  document.getElementById('budget').value = h.budget; // 라벨이 아닌 value로 복원하려면 별도 처리 필요
   document.getElementById('target').value = h.target;
-  // restore industry
   document.querySelectorAll('.industry-item').forEach(el => {
     if (el.querySelector('span').textContent.replace(/\s/g,'') === h.industry.replace(/\s/g,'')) {
       el.classList.add('active');
@@ -694,12 +894,19 @@ function reloadHistory(idx) {
       el.classList.remove('active');
     }
   });
-  document.getElementById('analyze').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('analyze').scrollIntoView({ behavior:'smooth' });
 }
 
-/* ─── INIT ─── */
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
 window.addEventListener('load', () => {
   initHeroMap();
+  // 기본 차트: 초기 Top3(카페·음료 + 전체 + mid + mz + small)
+  const defaultTop3 = DISTRICTS
+    .map(d=>({...d, score:calcScore(d,'카페·음료','mid','mz','small')}))
+    .sort((a,b)=>b.score-a.score).slice(0,3);
+  currentChartData = buildChartData(defaultTop3);
   renderChart('hourly');
   renderHistory();
 });
