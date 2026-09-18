@@ -1,0 +1,16 @@
+# 필수
+numpy>=1.24
+sounddevice>=0.5.0      # 0.5.0부터 Windows WASAPI loopback 지원
+scipy>=1.10             # 고품질 리샘플링 (없으면 선형 보간으로 폴백)
+faster-whisper>=1.0.0   # 음성 인식
+
+# 번역 백엔드 - 하나만 있으면 됩니다 (기본값은 google)
+deep-translator>=1.11.4 # --translator google
+
+# --translator claude 를 쓸 때
+# anthropic>=1.0
+
+# --translator local (기기 밖으로 아무것도 안 나감) 을 쓸 때
+# transformers>=4.40
+# sentencepiece
+# torch
