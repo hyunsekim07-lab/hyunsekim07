@@ -14,6 +14,7 @@ python live_sub.py --src ja --dst ko
 ```
 
 Windows면 `run.bat` 더블클릭으로도 됩니다.
+**macOS는 먼저 아래 2번의 BlackHole 설정을 마쳐야 합니다** — 안 하면 소리를 잡지 못합니다.
 
 첫 실행 때 Whisper 모델(`small`, 약 500 MB)을 한 번 내려받습니다. 그 뒤로는 바로 뜹니다.
 자막 창은 **드래그로 이동, 휠로 글자 크기, 우클릭으로 메뉴, Esc로 종료**입니다.
@@ -47,6 +48,61 @@ python live_sub.py --device "monitor"     # 이름 일부만 써도 됩니다
 python live_sub.py --calibrate     # 10초간 입력 레벨 측정
 python live_sub.py --threshold 0.002
 ```
+
+> 어떤 영상이든 됩니다. 파일을 읽는 게 아니라 **스피커로 나가는 소리**를 잡기 때문에,
+> 사파리/크롬에서 재생하는 스트리밍 영상도 그대로 자막이 붙습니다.
+
+### macOS 설정 (BlackHole)
+
+macOS는 Apple 정책상 가상 오디오 장치 없이는 시스템 소리를 잡을 수 없습니다.
+
+**1) BlackHole 설치**
+
+```bash
+brew install blackhole-2ch
+```
+
+Homebrew가 없으면 <https://existential.audio/blackhole/> 에서 2ch 설치 파일을 받으세요.
+설치 후 재부팅을 권장합니다.
+
+**2) 듣기와 잡기를 동시에 — 다중 출력 장치**
+
+BlackHole로만 출력하면 **귀에는 아무 소리도 안 들립니다.** 둘을 묶어야 합니다.
+
+1. Spotlight에서 **Audio MIDI 설정** 실행
+2. 좌하단 **`+`** → **다중 출력 장치 생성**
+3. **내장 출력**(또는 쓰는 헤드폰)과 **BlackHole 2ch** 를 둘 다 체크
+4. **내장 출력을 맨 위(마스터)** 로 두고, BlackHole 쪽 **Drift Correction** 체크
+5. 시스템 설정 → 사운드 → **출력을 "다중 출력 장치"로** 변경
+
+> 다중 출력 장치를 쓰면 **키보드 볼륨 키가 동작하지 않습니다.**
+> 볼륨은 영상 플레이어 안에서 조절하고, 다 본 뒤에는 출력을 원래 장치로 되돌리세요.
+
+**3) 마이크 권한** — 빼먹으면 무음입니다
+
+시스템 설정 → **개인정보 보호 및 보안 → 마이크** → **터미널**(또는 iTerm) 허용.
+오디오 입력 스트림을 여는 것이라 BlackHole에도 마이크 권한이 필요합니다.
+
+**4) 실행**
+
+```bash
+python3 live_sub.py --device "BlackHole" --src ja --dst ko
+```
+
+소리가 들어오는지 먼저 확인:
+
+```bash
+python3 live_sub.py --device "BlackHole" --calibrate
+```
+
+영상을 재생하는 동안 `rms` 값이 움직이면 정상입니다. 계속 0이면 2) 또는 3)이 안 된 것입니다.
+
+**맥에서 자주 걸리는 것**
+
+- `ModuleNotFoundError: No module named '_tkinter'` → `brew install python-tk`.
+  급하면 `--console` 로 터미널에만 자막을 띄우세요.
+- faster-whisper는 Apple Silicon GPU(Metal)를 쓰지 못하고 CPU로만 돌아갑니다.
+  M 시리즈에서 `small` 이 쓸 만하고, 버벅이면 `--model base` 로 내리세요.
 
 ---
 
