@@ -519,7 +519,10 @@ create trigger trg_transaction_stamp_upd
 -- ============================================================
 --  8. 카드 소유 증명
 -- ============================================================
--- 8-1. 챌린지 생성. 그 카드의 실제 최근 결제 금액 + 그럴듯한 오답 2개.
+-- 8-1. 챌린지 생성. 그 카드의 실제 최근 결제 금액 + 그럴듯한 오답 8개.
+--
+-- 보기 수(9)가 허용 시도 수(3, 8-2)보다 반드시 많아야 한다. 오답이 2개뿐이던 이전
+-- 버전은 보기 3개·시도 3번이라 답을 몰라도 다 찍으면 무조건 통과하는 구조였다.
 create or replace function start_card_verification(p_card uuid)
 returns integer[]
 language plpgsql
@@ -566,10 +569,11 @@ begin
   end if;
 
   -- 오답은 실제 금액과 자릿수가 비슷해야 한다. 티 나면 찍어서 맞힌다.
-  decoys := array[
-    greatest(1000, real_amt + 1000 + (random() * 8000)::integer),
-    greatest(1000, real_amt - 1000 - (random() * 8000)::integer)
-  ];
+  -- 8개(위 4개, 아래 4개)를 만들어 보기를 총 9개로 늘린다.
+  select array_agg(greatest(1000, real_amt + (n * 1000) + (random() * 4000)::integer))
+         || array_agg(greatest(1000, real_amt - (n * 1000) - (random() * 4000)::integer))
+    into decoys
+  from generate_series(1, 4) as n;
 
   select array_agg(v order by random()) into picks
   from unnest(real_amt || decoys) as v;
@@ -605,7 +609,8 @@ begin
     raise exception 'no active challenge';
   end if;
 
-  -- 3지선다이므로 시도를 제한하지 않으면 그냥 다 찍으면 된다.
+  -- 시도 횟수(3)가 보기 수(9)보다 반드시 적어야 한다. 같거나 많으면 답을 몰라도
+  -- 남은 보기를 소거법으로 다 찍어서 무조건 통과하게 된다.
   if ch.attempts >= 3 then
     raise exception 'too many attempts';
   end if;
@@ -803,8 +808,12 @@ create policy own_profile on profiles
 create policy cards_select on user_cards
   for select using (user_id = auth.uid());
 
+-- verified_at is null 조건이 핵심이다. 이게 없으면 사용자가 insert 할 때
+-- verified_at 을 직접 now() 로 채워 넣어 챌린지 자체를 건너뛸 수 있다
+-- (update 정책이 없다고 안심한 것과 같은 구멍이 insert 에는 그대로 열려 있었다).
+-- 검증은 반드시 8번의 security definer 함수(submit_card_verification)만 거치게 한다.
 create policy cards_insert on user_cards
-  for insert with check (user_id = auth.uid());
+  for insert with check (user_id = auth.uid() and verified_at is null);
 
 create policy cards_delete on user_cards
   for delete using (user_id = auth.uid());
