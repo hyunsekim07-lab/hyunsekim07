@@ -119,13 +119,15 @@ RLS를 빠뜨려 쓰기까지 열려 있었다.
 - `cards_insert`류 RLS 우회, 챌린지 소거법 뚫기 — 둘 다 제거 대상 코드에 있던 문제였고
   코드 자체를 지웠으므로 재현 불가 확인.
 - `redeem_coupon()`이 QR 토큰 2개 인자(위치 파라미터 제거 후)로 정상 동작.
-- **새로 발견한 별개의 버그**: `on_transaction_written()` 트리거 함수가
-  `security definer`가 아니라서, `authenticated` 롤로 실제 거래를 insert하면
+- **발견 후 수정한 별개의 버그**: `on_transaction_written()` 트리거 함수가
+  `security definer`가 아니었어서, `authenticated` 롤로 실제 거래를 insert하면
   `reconcile_stamps()` 호출에서 `permission denied for function reconcile_stamps`로
-  막힌다. 지금까지의 테스트가 전부 관리자 권한(postgres 롤)으로만 돌아서 이 경로가
-  한 번도 낮은 권한으로 실행된 적이 없었기 때문에 안 걸렸던 것. **이대로면 실제 앱
-  사용자는 스탬프가 전혀 안 쌓인다** — `on_transaction_written()`을 `security definer`로
-  바꾸거나 `reconcile_stamps`를 `authenticated`에 그란트해야 한다. 아직 미수정.
+  막혔다. 지금까지의 테스트가 전부 관리자 권한(postgres 롤)으로만 돌아서 이 경로가
+  한 번도 낮은 권한으로 실행된 적이 없었기 때문에 안 걸렸던 것. `on_transaction_written()`에
+  `security definer` + `search_path` 고정을 추가해 고쳤고, `authenticated` 롤로 거래
+  10건 insert → 스탬프 적립 → 쿠폰 자동 발급까지 로컬 Postgres로 재현·확인함.
+  `reconcile_stamps`/`earned_target`을 클라이언트가 직접 호출하는 건 여전히
+  permission denied로 막힌다(의도한 대로).
 
 **아직 미확인: RLS 실제 차단 동작 나머지.** `schema.sql` 13번 섹션의 원장 불변식 검사,
 매장용 뷰 두 개. 로그인 세션이 필요해 SQL Editor로는 어렵다.

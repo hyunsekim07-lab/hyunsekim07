@@ -436,8 +436,16 @@ end $$;
 revoke execute on function reconcile_stamps(uuid, uuid, uuid) from public;
 
 
+-- security definer가 필수다: reconcile_stamps는 public에서 revoke돼 있어서(위),
+-- 이 트리거를 호출한 authenticated 롤엔 그 함수를 직접 실행할 권한이 없다.
+-- invoker로 두면 실제 앱(authenticated)에서 insert할 때마다 permission denied로
+-- 막혀서 스탬프가 전혀 안 쌓인다 — 지금까지 테스트를 관리자 권한으로만 해서 못 봤던 버그.
 create or replace function on_transaction_written()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
 begin
   perform reconcile_stamps(new.user_id, new.merchant_id, new.id);
   return null;
