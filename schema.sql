@@ -3,13 +3,18 @@
 --  Postgres 15+ / Supabase SQL Editor에 그대로 붙여넣기 가능
 --
 --  v1 대비 달라진 것
---   1. 카드 소유 증명 (미검증 카드는 소급 적립도, 선점도 불가)
---   2. 금액 기반 적립 (누적 n원마다 스탬프 1개) 지원
---   3. 적립을 '목표치 재계산' 방식으로 통일 — 소급/취소가 같은 경로로 처리된다
---   4. 매장 운영자 계정과 매장용 화면 (고객 식별자는 매장별 익명 별칭)
---   5. 쿠폰 사용: 매장 고정 QR을 고객이 스캔
---   6. 알림 파싱 규칙을 서버에서 관리 (앱 업데이트 없이 수정)
---   7. 알림 원문 보존 (파싱 오류 시 재처리)
+--   1. 금액 기반 적립 (누적 n원마다 스탬프 1개) 지원
+--   2. 적립을 '목표치 재계산' 방식으로 통일 — 소급/취소가 같은 경로로 처리된다
+--   3. 매장 운영자 계정과 매장용 화면 (고객 식별자는 매장별 익명 별칭)
+--   4. 쿠폰 사용: 매장 고정 QR을 고객이 스캔
+--   5. 알림 파싱 규칙을 서버에서 관리 (앱 업데이트 없이 수정)
+--   6. 알림 원문 보존 (파싱 오류 시 재처리)
+--
+--  card_hash 기반 카드 소유 증명(challenge-response)은 뺐다. 알림 파싱(1단계)은
+--  카드 전체 번호가 없어 card_hash를 만들 재료가 없고, 마이데이터(2단계)는 pull
+--  모델이라 이 장치 자체가 필요 없다. VAN·PG 제휴 경로를 실제로 열게 되면 그때
+--  카드 소유 증명을 다시 설계해야 한다 — 남의 카드번호를 아는 사람이 등록해
+--  과거·실시간 거래를 가져가는 문제가 그 경로에서는 다시 생긴다.
 -- ============================================================
 
 create extension if not exists pgcrypto;   -- gen_random_uuid, gen_random_bytes, hmac
@@ -145,67 +150,12 @@ create index on merchant_qr (merchant_id) where revoked_at is null;
 
 
 -- ============================================================
---  3. 카드
--- ============================================================
--- card_hash = hmac(카드번호, 서버 pepper).
---
--- 주의: 카드번호는 엔트로피가 낮다(앞 6자리 BIN 고정 + 마지막 체크섬).
--- pepper가 DB와 같은 곳에 있으면 유출 시 전수 대입으로 카드번호가 복원된다.
--- pepper는 반드시 DB 밖(KMS 등)에 두고, 해시는 서버에서 계산해 넣는다.
-create table user_cards (
-  id           uuid primary key default gen_random_uuid(),
-  user_id      uuid not null references profiles(id) on delete cascade,
-  card_hash    text,
-  issuer       text not null,
-  last4        char(4),
-  label        text,
-
-  -- ★ 소유 증명. 이게 없으면 카드번호를 아는 사람이 남의 카드를 등록해
-  --   과거 거래를 가져가고, 이후 결제까지 실시간으로 넘겨받는다.
-  --   금전 목적이 아니라 추적 목적의 공격이라 이상 탐지에도 걸리지 않는다.
-  verified_at  timestamptz,
-
-  created_at   timestamptz not null default now(),
-  unique (user_id, issuer, last4)
-);
-
-create index on user_cards (user_id);
-
--- 전역 유니크를 '검증된 카드'에만 건다.
--- 전체 unique로 두면 미검증 등록만으로 남의 카드를 선점해버릴 수 있고,
--- 진짜 주인은 "이미 등록된 카드입니다"만 보고 이유를 알 수 없다.
-create unique index user_cards_verified_hash_uniq
-  on user_cards (card_hash) where verified_at is not null and card_hash is not null;
-
-
--- 소유 증명 챌린지.
--- 우리가 이미 그 카드의 거래를 들고 있다는 점을 이용한다.
--- "최근 이 카드로 결제한 금액은?" — 카드번호만 아는 사람은 못 맞힌다.
---
--- 이 테이블은 RLS를 켜고 정책을 하나도 두지 않는다(7번 참고).
--- 정답이 들어 있으므로 사용자가 직접 조회할 수 있으면 검증 자체가 무의미해진다.
-create table card_verifications (
-  id            uuid primary key default gen_random_uuid(),
-  -- 카드당 챌린지는 하나만 만들어 계속 재사용한다.
-  -- 호출할 때마다 새로 만들면, 보기를 두세 번 받아 교집합을 내는 것만으로
-  -- 정답이 드러난다(정답은 항상 포함되고 오답만 매번 바뀌므로).
-  user_card_id  uuid not null unique references user_cards(id) on delete cascade,
-  answer_amount integer not null,
-  choices       integer[] not null,
-  attempts      integer not null default 0,
-  passed_at     timestamptz,
-  created_at    timestamptz not null default now()
-);
-
-
--- ============================================================
---  4. 거래
+--  3. 거래
 -- ============================================================
 create table transactions (
   id           uuid primary key default gen_random_uuid(),
 
   user_id      uuid references profiles(id) on delete set null,
-  card_hash    text,
 
   merchant_id  uuid references merchants(id) on delete set null,
   raw_merchant text,                     -- 원본 가맹점 문자열 (매칭 실패 시 큐로 사용)
@@ -231,14 +181,13 @@ create table transactions (
 );
 
 create index on transactions (user_id, paid_at desc);
-create index on transactions (card_hash) where card_hash is not null;
 create index on transactions (merchant_id) where merchant_id is not null;
 create index on transactions (raw_merchant) where merchant_id is null;
 create index on transactions (merchant_id, paid_at desc) where cancelled_at is null;
 
 
 -- ============================================================
---  5. 스탬프 / 쿠폰
+--  4. 스탬프 / 쿠폰
 -- ============================================================
 create table stamp_events (
   id              uuid primary key default gen_random_uuid(),
@@ -276,9 +225,7 @@ create table coupons (
 
   -- 사용 처리. 정산 근거이자 분쟁 근거다.
   redeemed_at   timestamptz,
-  redeemed_qr   uuid references merchant_qr(id) on delete set null,
-  redeemed_lat  double precision,
-  redeemed_lng  double precision
+  redeemed_qr   uuid references merchant_qr(id) on delete set null
 );
 
 create index on coupons (user_id) where redeemed_at is null;
@@ -309,7 +256,7 @@ group by s.user_id, s.merchant_id, m.name, m.stamps_required, m.reward_text, c.s
 
 
 -- ============================================================
---  6. 알림 파싱 규칙
+--  5. 알림 파싱 규칙
 -- ============================================================
 -- 앱에 정규식을 하드코딩하면, 카드사가 문구를 바꿀 때마다 앱 심사를 기다려야 한다.
 -- 그 사이 적립은 조용히 멈추고 사용자는 몇 주 뒤에 눈치챈다.
@@ -329,10 +276,10 @@ create index on notification_rules (issuer, priority) where is_active;
 
 
 -- ============================================================
---  7. 적립 로직
+--  6. 적립 로직
 -- ============================================================
 
--- 7-1. 거래가 들어오면 매장과 사용자를 연결하고 중복 키를 채운다.
+-- 6-1. 거래가 들어오면 매장과 사용자를 연결하고 중복 키를 채운다.
 create or replace function resolve_transaction()
 returns trigger language plpgsql as $$
 begin
@@ -352,18 +299,11 @@ begin
     end if;
   end if;
 
-  -- 카드 → 사용자 매칭. 검증된 카드만 붙인다.
-  if new.user_id is null and new.card_hash is not null then
-    select user_id into new.user_id
-    from user_cards
-    where card_hash = new.card_hash and verified_at is not null;
-  end if;
-
   -- 중복 방지 키. unique 제약은 NULL을 걸러주지 않으므로 비워두면 중복이 그냥 통과한다.
   -- paid_at::text 대신 epoch를 쓰는 이유: 텍스트 표기는 세션 TimeZone에 따라 달라진다.
   if new.dedupe_key is null then
     new.dedupe_key := md5(
-      coalesce(new.card_hash, new.user_id::text, '') || '|' ||
+      coalesce(new.user_id::text, '') || '|' ||
       coalesce(new.raw_merchant, new.merchant_id::text, '') || '|' ||
       new.amount::text || '|' ||
       extract(epoch from new.paid_at)::bigint::text
@@ -378,7 +318,7 @@ create trigger trg_resolve_transaction
   for each row execute function resolve_transaction();
 
 
--- 7-2. 목표치 계산.
+-- 6-2. 목표치 계산.
 -- "지금까지 이 사용자가 이 매장에서 받았어야 할 스탬프 총량"을 거래에서 직접 유도한다.
 -- 이월 잔액 같은 상태를 들고 있지 않으므로 소급 적립도, 결제 취소도 재계산 한 번으로 끝난다.
 create or replace function earned_target(p_user uuid, p_merchant uuid)
@@ -428,11 +368,11 @@ end $$;
 revoke execute on function earned_target(uuid, uuid) from public;
 
 
--- 7-3. 재계산 + 쿠폰 발급.
+-- 6-3. 재계산 + 쿠폰 발급.
 -- 신규 적립, 소급 적립, 결제 취소가 전부 이 함수 하나를 지난다.
 --
 -- security definer 인 이유: 스탬프와 쿠폰은 서버만 발급할 수 있어야 한다.
--- stamp_events / coupons 에는 insert 정책을 두지 않고(8번), 이 경로만 RLS를 넘는다.
+-- stamp_events / coupons 에는 insert 정책을 두지 않고(9번), 이 경로만 RLS를 넘는다.
 create or replace function reconcile_stamps(
   p_user uuid, p_merchant uuid, p_tx uuid default null
 )
@@ -517,162 +457,7 @@ create trigger trg_transaction_stamp_upd
 
 
 -- ============================================================
---  8. 카드 소유 증명
--- ============================================================
--- 8-1. 챌린지 생성. 그 카드의 실제 최근 결제 금액 + 그럴듯한 오답 8개.
---
--- 보기 수(9)가 허용 시도 수(3, 8-2)보다 반드시 많아야 한다. 오답이 2개뿐이던 이전
--- 버전은 보기 3개·시도 3번이라 답을 몰라도 다 찍으면 무조건 통과하는 구조였다.
-create or replace function start_card_verification(p_card uuid)
-returns integer[]
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  c        user_cards%rowtype;
-  ch       card_verifications%rowtype;
-  real_amt integer;
-  decoys   integer[];
-  picks    integer[];
-begin
-  select * into c from user_cards where id = p_card;
-  if not found or c.user_id <> auth.uid() then
-    raise exception 'card not found';
-  end if;
-  if c.verified_at is not null then
-    raise exception 'already verified';
-  end if;
-  if c.card_hash is null then
-    raise exception 'card hash required';
-  end if;
-
-  -- 이미 만들어둔 챌린지가 있으면 그대로 돌려준다. 보기가 바뀌면 안 된다.
-  select * into ch from card_verifications where user_card_id = p_card;
-  if found then
-    if ch.attempts >= 3 then
-      raise exception 'verification locked';
-    end if;
-    return ch.choices;
-  end if;
-
-  select amount into real_amt
-  from transactions
-  where card_hash = c.card_hash
-  order by paid_at desc
-  limit 1;
-
-  -- 아직 이 카드의 거래가 하나도 없으면 이 방식으로는 증명할 수 없다.
-  -- (알림 파싱만 돌리는 단계에서는 정상적인 상황이다. 다른 수단으로 보내야 한다)
-  if real_amt is null then
-    raise exception 'not enough data to verify';
-  end if;
-
-  -- 오답은 실제 금액과 자릿수가 비슷해야 한다. 티 나면 찍어서 맞힌다.
-  -- 8개(위 4개, 아래 4개)를 만들어 보기를 총 9개로 늘린다.
-  select array_agg(greatest(1000, real_amt + (n * 1000) + (random() * 4000)::integer))
-         || array_agg(greatest(1000, real_amt - (n * 1000) - (random() * 4000)::integer))
-    into decoys
-  from generate_series(1, 4) as n;
-
-  select array_agg(v order by random()) into picks
-  from unnest(real_amt || decoys) as v;
-
-  insert into card_verifications (user_card_id, answer_amount, choices)
-  values (p_card, real_amt, picks);
-
-  return picks;
-end $$;
-
-
--- 8-2. 정답 제출. 통과하면 검증 도장을 찍고, 그 순간 소급 적립이 돈다.
-create or replace function submit_card_verification(p_card uuid, p_amount integer)
-returns boolean
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v user_cards%rowtype;
-  ch card_verifications%rowtype;
-begin
-  select * into v from user_cards where id = p_card;
-  if not found or v.user_id <> auth.uid() then
-    raise exception 'card not found';
-  end if;
-
-  select * into ch
-  from card_verifications
-  where user_card_id = p_card and passed_at is null;
-
-  if not found then
-    raise exception 'no active challenge';
-  end if;
-
-  -- 시도 횟수(3)가 보기 수(9)보다 반드시 적어야 한다. 같거나 많으면 답을 몰라도
-  -- 남은 보기를 소거법으로 다 찍어서 무조건 통과하게 된다.
-  if ch.attempts >= 3 then
-    raise exception 'too many attempts';
-  end if;
-
-  update card_verifications set attempts = attempts + 1 where id = ch.id;
-
-  if ch.answer_amount <> p_amount then
-    return false;
-  end if;
-
-  update card_verifications set passed_at = now() where id = ch.id;
-  update user_cards set verified_at = now() where id = p_card;
-  return true;
-end $$;
-
-
--- 8-3. 검증된 순간 소급 적립.
--- 등록 시점이 아니라 '검증 시점'에 도는 것이 핵심이다.
---
--- security definer 가 필수다: 주인 없는 거래(user_id is null)는 RLS상 아무에게도
--- 보이지 않으므로, invoker 권한으로 돌면 아래 update가 0건을 건드리고 조용히 끝난다.
-create or replace function backfill_on_card_verified()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  r record;
-begin
-  if new.verified_at is null or old.verified_at is not null then
-    return new;
-  end if;
-  if new.card_hash is null then
-    return new;
-  end if;
-
-  update transactions
-  set user_id = new.user_id
-  where card_hash = new.card_hash and user_id is null;
-
-  -- 매장별로 한 번씩만 재계산하면 된다. 목표치 방식이라 건별로 돌 필요가 없다.
-  for r in
-    select distinct merchant_id
-    from transactions
-    where card_hash = new.card_hash
-      and user_id = new.user_id
-      and merchant_id is not null
-  loop
-    perform reconcile_stamps(new.user_id, r.merchant_id, null);
-  end loop;
-
-  return new;
-end $$;
-
-create trigger trg_backfill_card
-  after update of verified_at on user_cards
-  for each row execute function backfill_on_card_verified();
-
-
--- ============================================================
---  9. 쿠폰 사용
+--  7. 쿠폰 사용
 -- ============================================================
 -- 고객이 매장 QR을 스캔하면 사용 처리된다. 사장님은 종이 한 장 붙인 것 외에 할 일이 없다.
 --
@@ -681,9 +466,7 @@ create trigger trg_backfill_card
 -- 재사용(스크린샷 돌려쓰기)은 redeemed_at is null 조건이 원자적으로 막는다.
 create or replace function redeem_coupon(
   p_code     text,
-  p_qr_token text,
-  p_lat      double precision default null,
-  p_lng      double precision default null
+  p_qr_token text
 )
 -- 반환 컬럼 이름에 접두사를 붙인 이유: plpgsql은 OUT 파라미터와 이름이 같은 컬럼을
 -- 변수로 해석한다. 'redeemed_at' 을 그대로 쓰면 아래 update의 재사용 방지 조건이
@@ -709,9 +492,7 @@ begin
 
   update coupons
   set redeemed_at  = now(),
-      redeemed_qr  = q.id,
-      redeemed_lat = p_lat,
-      redeemed_lng = p_lng
+      redeemed_qr  = q.id
   where code = p_code
     and user_id = auth.uid()
     and merchant_id = q.merchant_id
@@ -736,7 +517,7 @@ end $$;
 
 
 -- ============================================================
---  10. 매장용 화면
+--  8. 매장용 화면
 -- ============================================================
 -- 이 뷰들은 일부러 security_invoker 를 켜지 않는다.
 -- 사장님에게 transactions 를 RLS로 직접 열어주면 PostgREST로 user_id 까지 긁을 수 있다.
@@ -781,14 +562,12 @@ order by cnt desc;
 
 
 -- ============================================================
---  11. RLS
+--  9. RLS
 -- ============================================================
 -- Supabase는 public 스키마를 PostgREST로 노출하고, anon key는 앱에 박혀 있어
 -- 사실상 공개값이다. 즉 anon key로 가능한 모든 일은 공격자도 할 수 있다.
 -- 테이블을 추가할 때 RLS 활성화를 같은 마이그레이션에 반드시 함께 넣을 것.
 alter table profiles           enable row level security;
-alter table user_cards         enable row level security;
-alter table card_verifications enable row level security;
 alter table transactions       enable row level security;
 alter table stamp_events       enable row level security;
 alter table coupons            enable row level security;
@@ -801,26 +580,6 @@ alter table notification_rules enable row level security;
 -- 본인 데이터만
 create policy own_profile on profiles
   for all using (id = auth.uid());
-
--- update 정책을 일부러 두지 않는다.
--- for all 로 열면 사용자가 verified_at 을 스스로 now() 로 찍어
--- 소유 증명을 통째로 우회할 수 있다. verified_at 은 8번 함수만 건드린다.
-create policy cards_select on user_cards
-  for select using (user_id = auth.uid());
-
--- verified_at is null 조건이 핵심이다. 이게 없으면 사용자가 insert 할 때
--- verified_at 을 직접 now() 로 채워 넣어 챌린지 자체를 건너뛸 수 있다
--- (update 정책이 없다고 안심한 것과 같은 구멍이 insert 에는 그대로 열려 있었다).
--- 검증은 반드시 8번의 security definer 함수(submit_card_verification)만 거치게 한다.
-create policy cards_insert on user_cards
-  for insert with check (user_id = auth.uid() and verified_at is null);
-
-create policy cards_delete on user_cards
-  for delete using (user_id = auth.uid());
-
--- card_verifications 는 정책을 두지 않는다.
--- 정답(answer_amount)이 들어 있으므로 사용자가 조회할 수 있으면 검증이 무의미해진다.
--- 8번의 security definer 함수로만 접근한다.
 
 -- 알림 파싱 경로에서는 사용자 기기가 직접 거래를 넣으므로 insert를 열어둔다.
 -- 이 구조는 클라이언트를 믿는다는 뜻이다. daily_limit → 이상 패턴 탐지 →
@@ -860,7 +619,7 @@ create policy staff_qr on merchant_qr
 
 
 -- ============================================================
---  12. 시드 데이터 (테스트용)
+--  10. 시드 데이터 (테스트용)
 -- ============================================================
 with m as (
   insert into merchants (name, category, is_partner, accrual_type,
@@ -890,7 +649,7 @@ select m.id, '동네슈퍼예시', 'shinhan' from m;
 
 
 -- ============================================================
---  13. 자주 쓸 쿼리
+--  11. 자주 쓸 쿼리
 -- ============================================================
 -- 내 스탬프 현황
 -- select * from v_stamp_balance where user_id = auth.uid();
@@ -898,39 +657,31 @@ select m.id, '동네슈퍼예시', 'shinhan' from m;
 -- 매칭 실패한 가맹점 문자열
 -- select * from v_unmatched_merchants limit 50;
 
--- 카드 등록 → 검증 → 소급 적립
--- insert into user_cards (user_id, card_hash, issuer, last4) values (...) returning id;
--- select start_card_verification('<card_id>');
--- select submit_card_verification('<card_id>', 4500);
-
 -- 쿠폰 사용
--- select * from redeem_coupon('A1B2C3D4E5F6', '<qr_token>', 35.14, 129.09);
+-- select * from redeem_coupon('A1B2C3D4E5F6', '<qr_token>');
 
 
 -- ============================================================
---  14. 권한
+--  12. 권한
 -- ============================================================
--- 뷰는 RLS를 우회하므로(10번 참고) 스스로 권한을 확인한다. 조회 권한만 준다.
+-- 뷰는 RLS를 우회하므로(8번 참고) 스스로 권한을 확인한다. 조회 권한만 준다.
 grant select on v_stamp_balance, v_merchant_customers, v_merchant_redemptions to authenticated;
 
 -- 클라이언트가 호출해야 하는 함수만 열어준다.
 -- reconcile_stamps / earned_target 은 위에서 revoke 했다. 직접 호출 금지.
-grant execute on function is_merchant_staff(uuid)                      to authenticated;
-grant execute on function start_card_verification(uuid)                to authenticated;
-grant execute on function submit_card_verification(uuid, integer)      to authenticated;
-grant execute on function redeem_coupon(text, text, double precision, double precision)
-                                                                       to authenticated;
+grant execute on function is_merchant_staff(uuid)  to authenticated;
+grant execute on function redeem_coupon(text, text) to authenticated;
 
 
 -- ============================================================
---  15. 설치 후 점검 (실제로 돌려서 확인한 것들)
+--  13. 설치 후 점검 (실제로 돌려서 확인한 것들)
 -- ============================================================
 -- 테이블 수와 RLS 적용 수가 다르면 그 차이가 곧 공개 테이블이다.
 -- select
 --   (select count(*) from pg_tables where schemaname='public')                 as 테이블,
 --   (select count(*) from pg_tables where schemaname='public' and rowsecurity) as RLS켜짐,
 --   (select count(*) from pg_policies where schemaname='public')               as 정책;
---   -- 11 / 11 / 13
+--   -- 9 / 9 / 10
 
 -- 원장 불변식: 거래에서 유도한 목표치와 원장 합계가 항상 같아야 한다.
 -- 몇 번을 재실행하든, 중간에 취소를 섞든 이 등식은 깨지지 않는다.
@@ -939,12 +690,3 @@ grant execute on function redeem_coupon(text, text, double precision, double pre
 --   (select coalesce(sum(delta),0) from stamp_events
 --      where user_id = u.id and merchant_id = m.id)                             as 원장합계
 -- from profiles u, merchants m;
-
--- 소유 증명이 실제로 막는지 (관리자 권한으로는 확인되지 않는다)
--- set local role authenticated;
--- set local request.jwt.claims = '{"sub":"<user-uuid>","role":"authenticated"}';
---
---   select count(*) from card_verifications;   -- 0  정답이 들어 있으므로 아무도 못 본다
---   update user_cards set verified_at = now() where card_hash = '...';  -- UPDATE 0
---   insert into stamp_events (user_id, merchant_id, delta) values (...);
---     -- new row violates row-level security policy 로 실패해야 정상
