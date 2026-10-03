@@ -965,6 +965,24 @@ class LocalTranslator:
         return self.tokenizer.batch_decode(out, skip_special_tokens=True)[0].strip()
 
 
+def _api_key_help(exc: Exception) -> str:
+    has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    if not has_key:
+        return (
+            "ANTHROPIC_API_KEY 가 설정되어 있지 않습니다.\n\n"
+            "  PowerShell 에서 (이 창에서만 유효):\n"
+            '      $env:ANTHROPIC_API_KEY="sk-ant-..."\n'
+            "  창을 닫아도 유지하려면:\n"
+            '      setx ANTHROPIC_API_KEY "sk-ant-..."   (설정 후 새 창을 여세요)\n\n'
+            "  키는 https://console.anthropic.com/settings/keys 에서 만듭니다.\n"
+            "  키 없이 쓰려면:  --translator local  또는  --translator google"
+        )
+    return (
+        f"Claude API 인증에 실패했습니다: {str(exc)[:160]}\n"
+        "    키가 올바른지 확인하세요. 키 없이 쓰려면 --translator local 을 쓰세요."
+    )
+
+
 class ClaudeTranslator:
     """Claude API. 구어체/생략이 많은 대사에서 품질이 가장 좋다. ANTHROPIC_API_KEY 필요."""
 
@@ -975,8 +993,12 @@ class ClaudeTranslator:
             import anthropic
         except Exception as exc:                             # noqa: BLE001
             raise SystemExit(_import_help("anthropic", "anthropic", exc)) from exc
-        self.client = anthropic.Anthropic(timeout=20.0, max_retries=1)
+        try:
+            self.client = anthropic.Anthropic(timeout=20.0, max_retries=1)
+        except Exception as exc:                             # noqa: BLE001
+            raise SystemExit(_api_key_help(exc)) from exc
         self.model = model
+        self._check_access()
         self.history: deque[tuple[str, str]] = deque(maxlen=context)
         source_desc = ("whatever language the line is spoken in" if src == "auto"
                        else LANG_NAMES.get(src, src))
@@ -991,6 +1013,21 @@ class ClaudeTranslator:
             "- Earlier lines are given for context; translate ONLY the last line.\n"
             "- If the line is inaudible or meaningless filler, output nothing."
         )
+
+    def _check_access(self) -> None:
+        """키와 모델 이름을 시작할 때 확인한다. 자막이 통째로 안 나오는 걸 미리 막는다."""
+        try:
+            self.client.models.retrieve(self.model)
+        except Exception as exc:                             # noqa: BLE001
+            text = f"{exc}".lower()
+            if "not_found" in text or "404" in text:
+                raise SystemExit(
+                    f"'{self.model}' 모델을 쓸 수 없습니다.\n"
+                    "    --claude-model 로 다른 모델을 지정하세요 (예: claude-haiku-4-5)."
+                ) from exc
+            if "authentication" in text or "401" in text or "invalid x-api-key" in text:
+                raise SystemExit(_api_key_help(exc)) from exc
+            print(f"[trans] 시작 확인 실패(계속 진행합니다): {str(exc)[:120]}", file=sys.stderr)
 
     def translate(self, text: str, src: str | None = None) -> str:
         messages = []
@@ -1162,11 +1199,13 @@ def run(args) -> int:
     if args.calibrate:
         return _calibrate(args)
 
+    # 번역기를 먼저 만든다. 키가 없거나 잘못됐으면 느린 모델 로드 전에 알려주는 게 낫다.
+    translator = build_translator(args.translator, args.src, args.dst, args.claude_model)
+    print(f"[trans] 백엔드: {translator.name}  ({args.src} -> {args.dst})")
+
     recognizer = Recognizer(args.model, args.device_type, args.compute_type,
                             None if args.src == "auto" else args.src, args.beam_size,
                             initial_prompt=args.prompt)
-    translator = build_translator(args.translator, args.src, args.dst, args.claude_model)
-    print(f"[trans] 백엔드: {translator.name}  ({args.src} -> {args.dst})")
 
     audio_q: queue.Queue[np.ndarray] = queue.Queue()
     seg_q: queue.Queue[np.ndarray] = queue.Queue(maxsize=args.queue_limit)
