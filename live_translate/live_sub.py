@@ -185,12 +185,34 @@ def resolve_device(sd, spec):
     return idx, None, f"[{_hostapi_name(sd, dev)}] {dev['name']}"
 
 
+STEREO_MIX_NAMES = ("스테레오 믹스", "stereo mix", "what u hear",
+                    "wave out mix", "웨이브 출력 믹스", "믹스")
+
+
+def _stereo_mix_input(sd):
+    """'스테레오 믹스' 류의 입력 장치 index (없으면 None).
+
+    PortAudio 에 loopback 이 없을 때 스피커 소리를 받을 수 있는 또 다른 통로.
+    """
+    for i, dev in enumerate(sd.query_devices()):
+        if dev["max_input_channels"] <= 0:
+            continue
+        name = dev["name"].lower()
+        if any(k in name for k in STEREO_MIX_NAMES):
+            return i
+    return None
+
+
 def _auto_device(sd) -> int:
     system = platform.system()
     devices = list(sd.query_devices())
 
     if system == "Windows":
+        mix = _stereo_mix_input(sd)
         candidates = loopback_inputs(sd)
+        if not candidates and mix is not None:
+            print(f"[audio] loopback 대신 '스테레오 믹스' 를 씁니다: {sd.query_devices(mix)['name']}")
+            return mix
         if candidates:
             default_out = None
             for api in sd.query_hostapis():
@@ -220,8 +242,11 @@ def _auto_device(sd) -> int:
     default_in = sd.default.device[0]
     if default_in is not None and default_in >= 0:
         print(
-            "! 시스템 출력(loopback) 장치를 자동으로 찾지 못해 기본 입력(마이크)을 씁니다.\n"
-            "  --list-devices 로 확인 후 --device 로 직접 지정하세요.",
+            "\n"
+            "!! 스피커 소리를 잡을 통로를 찾지 못해 '마이크' 로 떨어졌습니다.\n"
+            "!! 이 상태로는 영상 소리가 아니라 주변 소리를 인식하므로 자막이 제대로 안 나옵니다.\n"
+            "   해결: 소리 설정 -> 입력에서 '스테레오 믹스' 켜기, 또는\n"
+            "         python live_sub.py --list-devices 로 확인 후 --device 로 지정\n",
             file=sys.stderr,
         )
         return default_in
@@ -289,6 +314,39 @@ class Capture:
                 pass
 
 
+def _com_init() -> bool:
+    """현재 스레드에 Windows COM 을 초기화한다.
+
+    soundcard 는 import 시점에 '그 스레드' 에서만 CoInitializeEx 를 부른다.
+    캡처를 별도 스레드에서 돌리면 그 스레드는 초기화되지 않은 상태라
+    오디오 클라이언트를 열 때 0x800401f0 (CO_E_NOTINITIALIZED) 로 실패한다.
+    """
+    if platform.system() != "Windows":
+        return False
+    try:
+        import ctypes
+
+        ole32 = ctypes.windll.ole32
+    except Exception:                                        # noqa: BLE001
+        return False
+
+    COINIT_MULTITHREADED, COINIT_APARTMENTTHREADED = 0x0, 0x2
+    RPC_E_CHANGED_MODE = -2147417850                         # 0x80010106
+    hr = ole32.CoInitializeEx(None, COINIT_MULTITHREADED)
+    if hr == RPC_E_CHANGED_MODE:                             # 이미 STA 로 잡혀 있으면 맞춰준다
+        hr = ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
+    return hr in (0, 1)                                      # S_OK / S_FALSE
+
+
+def _com_uninit() -> None:
+    try:
+        import ctypes
+
+        ctypes.windll.ole32.CoUninitialize()
+    except Exception:                                        # noqa: BLE001
+        pass
+
+
 class SoundcardCapture:
     """soundcard 라이브러리로 WASAPI loopback 을 직접 연다.
 
@@ -322,6 +380,15 @@ class SoundcardCapture:
             raise SystemExit(f"soundcard 로 소리를 열지 못했습니다: {self.error}")
 
     def _loop(self) -> None:
+        last: Exception | None = None
+        com_owned = _com_init()                              # 이 스레드에서 COM 을 쓸 수 있게 한다
+        try:
+            self._record_loop()
+        finally:
+            if com_owned:
+                _com_uninit()
+
+    def _record_loop(self) -> None:
         last: Exception | None = None
         # 16 kHz 로 바로 받으면 리샘플링(scipy)이 아예 필요 없다.
         for rate in (TARGET_SR, 48000, 44100):
