@@ -678,6 +678,9 @@ def _is_junk(text: str) -> bool:
 CUDA_ERROR_HINTS = ("cublas", "cudnn", "cuda", "libcu", "gpu")
 
 
+_DLL_DIR_HANDLES: list = []                                  # 핸들이 사라지면 경로도 빠진다
+
+
 def _add_nvidia_dll_dirs() -> list[str]:
     """pip 로 설치한 nvidia-* 패키지의 DLL 폴더를 Windows DLL 검색 경로에 넣는다.
 
@@ -708,7 +711,7 @@ def _add_nvidia_dll_dirs() -> list[str]:
                 path = os.path.join(nvidia, pkg, leaf)
                 if os.path.isdir(path):
                     try:
-                        os.add_dll_directory(path)
+                        _DLL_DIR_HANDLES.append(os.add_dll_directory(path))
                         added.append(path)
                     except Exception:                        # noqa: BLE001
                         pass
@@ -734,7 +737,9 @@ class Recognizer:
         if device == "auto":
             device = "cuda" if _cuda_available() else "cpu"
         if device == "cuda":
-            _add_nvidia_dll_dirs()
+            found = _add_nvidia_dll_dirs()
+            if found:
+                print(f"[asr ] CUDA 라이브러리 경로 {len(found)}개 등록", flush=True)
         if compute_type is None:
             compute_type = "float16" if device == "cuda" else "int8"
 
@@ -748,6 +753,7 @@ class Recognizer:
         self.compute_type = compute_type
         self.model = None
         self._load(device, compute_type)
+        self._warmup()
 
     def _load(self, device: str, compute_type: str) -> None:
         print(f"[asr ] 모델 로드 중: {self.model_size} ({device}/{compute_type}) ...", flush=True)
@@ -762,6 +768,32 @@ class Recognizer:
             self._load("cpu", "int8")
             return
         print("[asr ] 준비 완료", flush=True)
+
+    def _warmup(self) -> None:
+        """짧은 무음을 한 번 돌려 CUDA 라이브러리를 지금 로드시킨다.
+
+        cuBLAS 는 첫 추론 때 비로소 불러와진다. 그대로 두면 영상을 보다가
+        한참 뒤에 GPU 가 실패하고 그때서야 CPU 로 떨어진다. 시작할 때 끝낸다.
+        """
+        import numpy as np
+
+        silence = np.zeros(TARGET_SR // 2, dtype=np.float32)
+        try:
+            self._transcribe(silence)
+        except Exception as exc:                             # noqa: BLE001
+            if not self._fallback_to_cpu(exc):
+                print(f"[asr ] 준비 확인 중 오류(계속 진행): {str(exc)[:120]}", file=sys.stderr)
+                return
+            try:
+                self._transcribe(silence)
+            except Exception:                                # noqa: BLE001
+                pass
+        if self.device == "cuda":
+            print("[asr ] GPU(CUDA) 로 동작합니다.", flush=True)
+        else:
+            print("[asr ] CPU 로 동작합니다. "
+                  "(NVIDIA GPU 가 있으면 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12)",
+                  flush=True)
 
     def _fallback_to_cpu(self, exc: Exception) -> bool:
         """GPU 추론이 실패하면 CPU 로 갈아탄다. 전환했으면 True."""

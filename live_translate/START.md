@@ -189,7 +189,8 @@ python3 selftest.py --save-audio    # 스피커로 틀어볼 음성 파일만 �
 | 자막 창은 떴는데 계속 "대기 중" | 소리를 못 잡는 중. `python3 live_sub.py --calibrate` 로 확인 |
 | `rms` 가 계속 0 | 맥이면 5-2/5-3 확인. 윈도우면 `--list-devices` 후 `<= 스피커 소리` 표시된 번호를 `--device` 로 지정 |
 | `rms` 는 움직이는데 자막이 안 뜸 | 기준값이 높음. `--threshold 0.002` 를 붙여보세요 |
-| 자막이 영상보다 많이 느림 | `--model base --silence 300` 으로 가볍게 |
+| 자막이 영상보다 많이 느림 | 먼저 `--timing` 으로 측정. NVIDIA GPU 가 있으면 `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12` 가 가장 큰 효과 |
+| 그래도 느림 | `--fast` (small 모델 + 짧은 구간) |
 | 번역이 어색함 | `--translator claude` (품질 최상, `ANTHROPIC_API_KEY` 필요) |
 | `too many requests` 오류 반복 | Google 무료 번역 제한. `python -m pip install -U deep-translator` 후에도 그러면 `--translator local` |
 | `No module named '_tkinter'` | 맥: `brew install python-tk` / 급하면 `--console` 로 터미널 자막 |

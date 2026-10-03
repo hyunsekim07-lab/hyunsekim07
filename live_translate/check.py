@@ -275,16 +275,56 @@ def _check_linux(devices) -> None:
 
 
 # ---------------------------------------------------------------- 5. GPU
+def _cuda_libs_present() -> tuple[bool, list[str]]:
+    """pip 로 설치한 nvidia-* 의 DLL 폴더가 있는지. (있음, 경로들)"""
+    import os
+
+    try:
+        import site
+
+        roots = set(site.getsitepackages())
+        try:
+            roots.add(site.getusersitepackages())
+        except Exception:                                    # noqa: BLE001
+            pass
+    except Exception:                                        # noqa: BLE001
+        return False, []
+
+    found = []
+    for root in roots:
+        nvidia = os.path.join(root, "nvidia")
+        if not os.path.isdir(nvidia):
+            continue
+        for pkg in os.listdir(nvidia):
+            for leaf in ("bin", "lib"):
+                path = os.path.join(nvidia, pkg, leaf)
+                if os.path.isdir(path) and os.listdir(path):
+                    found.append(f"{pkg}/{leaf}")
+    return bool(found), found
+
+
 def check_gpu() -> None:
-    head("5. 속도 (선택)")
+    head("5. 속도 — GPU 를 쓰고 있나")
     try:
         import ctranslate2
 
         count = ctranslate2.get_cuda_device_count()
     except Exception:                                        # noqa: BLE001
         count = 0
+
     if count > 0:
-        print(f"{OK} CUDA GPU {count}개 — 인식이 빠릅니다. --model medium 까지 쓸 만합니다.")
+        has_libs, found = _cuda_libs_present()
+        print(f"{OK} CUDA GPU {count}개 발견")
+        if has_libs:
+            print(f"{OK} CUDA 라이브러리 설치됨: {', '.join(sorted(set(found))[:4])}")
+            print("       GPU 로 동작합니다. --model medium 까지 쓸 만합니다.")
+        else:
+            print(f"{BAD} GPU 는 있는데 CUDA 라이브러리가 없어 CPU 로 돌게 됩니다.")
+            print("       자막이 말보다 몇 초씩 늦는 가장 큰 원인입니다.")
+            todo.append(
+                "GPU 를 켜면 인식이 몇 배 빨라집니다:\n"
+                f"    {pip_cmd()} nvidia-cublas-cu12 nvidia-cudnn-cu12"
+            )
     elif platform.system() == "Darwin" and platform.machine() == "arm64":
         print(f"{WARN} Apple Silicon 입니다. faster-whisper 는 CPU 로만 돕니다.")
         print("       --model small 로 시작하고, 버벅이면 --model base 로 내리세요.")
