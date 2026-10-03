@@ -10,6 +10,7 @@ live_sub.py - 컴퓨터에서 재생 중인 영상 소리를 실시간으로 받
 from __future__ import annotations
 
 import argparse
+import os
 import platform
 import queue
 import re
@@ -19,6 +20,10 @@ import time
 from collections import deque
 
 import numpy as np
+
+# 모델을 내려받을 때 huggingface_hub 가 윈도우에서 뿜는 symlink 경고를 숨긴다.
+# (캐시가 복사본으로 저장될 뿐 동작에는 문제가 없다.)
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 TARGET_SR = 16000          # Whisper 입력 샘플레이트
 FRAME_MS = 30              # VAD 프레임 길이
