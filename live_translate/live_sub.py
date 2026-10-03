@@ -629,6 +629,42 @@ HALLUCINATIONS = {
 }
 
 
+# 글자 종류로 언어를 판정한다. 짧은 대사에서는 Whisper 의 언어 감지보다 훨씬 안정적이다.
+_KANA = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u31f0-\u31ff]")
+_HANGUL = re.compile(r"[\uac00-\ud7a3\u1100-\u11ff\u3130-\u318f]")
+_HAN = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _script_of(text: str) -> str | None:
+    """'ja'(가나 포함) / 'ko'(한글) / 'han'(한자만) / None(라틴 등)."""
+    if _KANA.search(text):
+        return "ja"
+    if _HANGUL.search(text):
+        return "ko"
+    if _HAN.search(text):
+        return "han"                     # 일본어인지 중국어인지 글자만으론 모른다
+    return None
+
+
+def _already_target(text: str, dst: str, detected: str | None) -> bool:
+    """원문이 이미 보고 싶은 언어라 번역이 필요 없는지.
+
+    글자 종류로 알 수 있으면 그걸 믿는다. Whisper 의 언어 감지는 짧은 대사에서
+    자주 틀리는데, 그걸 믿고 번역을 건너뛰면 원문이 그대로 나와서
+    '번역이 아예 안 된다' 처럼 보인다.
+    """
+    script = _script_of(text)
+    if dst == "ko":
+        return script == "ko"
+    if dst == "ja":
+        return script == "ja"
+    if dst == "zh":
+        return script == "han"
+    if script is not None:               # 라틴 목표인데 한글/가나/한자면 번역 대상
+        return False
+    return bool(detected) and detected == dst
+
+
 def _is_junk(text: str) -> bool:
     stripped = re.sub(r"[\s。、．，.,!?！？…~ー\-♪♬*]", "", text).lower()
     if not stripped:
@@ -1267,10 +1303,10 @@ def run(args) -> int:
                 continue
             last = text
 
-            if language and language == args.dst:            # 이미 보고 싶은 언어면 번역하지 않는다
-                if language not in announced:
-                    announced.add(language)
-                    print(f"[trans] 감지된 언어가 {language} 라 번역 없이 원문만 띄웁니다.")
+            if _already_target(text, args.dst, language):    # 이미 보고 싶은 언어면 번역 생략
+                if "same" not in announced:
+                    announced.add("same")
+                    print(f"[trans] 원문이 이미 {args.dst} 라 번역 없이 띄웁니다.")
                 out_q.put(("", text))
                 continue
             if language and language not in announced:
