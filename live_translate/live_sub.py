@@ -1205,8 +1205,10 @@ class Overlay:
             self.sub.pack_forget()
 
     # -- 표시 ---------------------------------------------------------------
-    def show(self, translated: str, original: str):
-        self.main.configure(text=translated or original)
+    def show(self, translated: str, original: str, pending: bool = False):
+        """pending 이면 아직 번역 전이라 원문을 흐리게 보여준다."""
+        self.main.configure(text=translated or original,
+                            fg="#9aa0a6" if pending else "#ffffff")
         self.sub.configure(text=original if translated else "")
 
     def close(self):
@@ -1222,13 +1224,12 @@ class Overlay:
 # --------------------------------------------------------------------------
 
 def run(args) -> int:
-    try:
-        import sounddevice as sd
-    except ImportError:
-        print("sounddevice 가 없습니다:\n    pip install sounddevice", file=sys.stderr)
-        return 1
-
-    if args.list_devices:
+    if args.list_devices:                                    # 장치 목록에만 sounddevice 가 필요하다
+        try:
+            import sounddevice as sd
+        except Exception as exc:                             # noqa: BLE001
+            print(_import_help("sounddevice", "sounddevice", exc), file=sys.stderr)
+            return 1
         list_devices(sd)
         return 0
 
@@ -1266,28 +1267,30 @@ def run(args) -> int:
             for segment in segmenter.feed(block):
                 if segment.size == 0:
                     continue
+                item = (segment, time.monotonic())           # 말이 끝난 시각을 같이 넘긴다
                 try:
-                    seg_q.put_nowait(segment)
+                    seg_q.put_nowait(item)
                 except queue.Full:
                     try:                                     # 밀리면 가장 오래된 것부터 버린다
                         seg_q.get_nowait()
-                        seg_q.put_nowait(segment)
+                        seg_q.put_nowait(item)
                     except queue.Empty:
                         pass
 
     def asr_worker():
         while not stop.is_set():
             try:
-                segment = seg_q.get(timeout=0.2)
+                segment, ended_at = seg_q.get(timeout=0.2)
             except queue.Empty:
                 continue
+            started = time.monotonic()
             try:
                 text, language = recognizer.transcribe(segment)
             except Exception as exc:                         # noqa: BLE001
                 print(f"[asr ] 오류: {exc}", file=sys.stderr)
                 continue
             if text:
-                text_q.put((text, language))
+                text_q.put((text, language, ended_at, time.monotonic() - started))
 
     def translate_worker():
         cache: dict[tuple[str, str | None], str] = {}
@@ -1296,18 +1299,25 @@ def run(args) -> int:
         announced = set()
         while not stop.is_set():
             try:
-                text, language = text_q.get(timeout=0.2)
+                text, language, ended_at, asr_s = text_q.get(timeout=0.2)
             except queue.Empty:
                 continue
             if text == last:                                 # 같은 대사 반복 표시 방지
                 continue
             last = text
 
+            def emit(translated_text, final=True, translate_s=0.0):
+                out_q.put((translated_text, text, final))
+                if final and args.timing:
+                    total = time.monotonic() - ended_at
+                    print(f"[time] 인식 {asr_s:.1f}s + 번역 {translate_s:.1f}s "
+                          f"= 말이 끝나고 {total:.1f}s 뒤 표시", flush=True)
+
             if _already_target(text, args.dst, language):    # 이미 보고 싶은 언어면 번역 생략
                 if "same" not in announced:
                     announced.add("same")
                     print(f"[trans] 원문이 이미 {args.dst} 라 번역 없이 띄웁니다.")
-                out_q.put(("", text))
+                emit("")
                 continue
             if language and language not in announced:
                 announced.add(language)
@@ -1315,8 +1325,13 @@ def run(args) -> int:
 
             key = (text, language)
             if key in cache:
-                out_q.put((cache[key], text))
+                emit(cache[key])
                 continue
+
+            # 번역을 기다리는 동안 원문이라도 먼저 띄운다 (체감 지연이 크게 준다).
+            out_q.put(("", text, False))
+
+            translate_started = time.monotonic()
             try:
                 translated = translator.translate(text, src=language)
             except Exception as exc:                         # noqa: BLE001
@@ -1332,7 +1347,7 @@ def run(args) -> int:
                 cache[key] = translated
                 if len(cache) > 500:
                     cache.pop(next(iter(cache)))
-            out_q.put((translated, text))
+            emit(translated, translate_s=time.monotonic() - translate_started)
 
     threads = [
         threading.Thread(target=segment_worker, daemon=True),
@@ -1360,8 +1375,10 @@ def run(args) -> int:
 def _console_loop(out_q, stop, show_source):
     while not stop.is_set():
         try:
-            translated, original = out_q.get(timeout=0.3)
+            translated, original, final = out_q.get(timeout=0.3)
         except queue.Empty:
+            continue
+        if not final:                                        # 번역 대기 중인 중간 상태
             continue
         if show_source and translated:
             print(f"  {original}")
@@ -1387,11 +1404,12 @@ def _overlay_loop(out_q, stop, args):
             except queue.Empty:
                 break
         if drained is not None:
-            translated, original = drained
-            overlay.show(translated, original)
-            if args.show_source and translated:
-                print(f"  {original}")
-            print(f"> {translated or original}", flush=True)
+            translated, original, final = drained
+            overlay.show(translated, original, pending=not final)
+            if final:
+                if args.show_source and translated:
+                    print(f"  {original}")
+                print(f"> {translated or original}", flush=True)
         overlay.root.after(60, pump)
 
     overlay.root.after(60, pump)
@@ -1470,12 +1488,27 @@ def parse_args(argv=None):
                      help="밀렸을 때 버리기 시작하는 대기 조각 수")
 
     ui = parser.add_argument_group("자막 표시")
+    ui.add_argument("--timing", action="store_true",
+                    help="자막이 말보다 몇 초 늦는지, 어디서 걸리는지 표시")
+    ui.add_argument("--fast", action="store_true",
+                    help="지연 최소 설정 (--model small --silence 250 --max-segment 3)")
     ui.add_argument("--console", action="store_true", help="오버레이 없이 터미널에만 출력")
     ui.add_argument("--show-source", action="store_true", help="원문도 같이 표시")
     ui.add_argument("--font-size", type=int, default=26)
     ui.add_argument("--opacity", type=float, default=0.85)
     ui.add_argument("--width", type=float, default=0.8, help="화면 가로 대비 자막창 너비 비율")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.fast:                                            # 사용자가 직접 준 값은 건드리지 않는다
+        given = set(argv if argv is not None else sys.argv[1:])
+        if not any(a.startswith("--model") for a in given):
+            args.model = "small"
+        if not any(a.startswith("--silence") for a in given):
+            args.silence = 250
+        if not any(a.startswith("--max-segment") for a in given):
+            args.max_segment = 3.0
+        if not any(a.startswith("--min-speech") for a in given):
+            args.min_speech = 250
+    return args
 
 
 def main() -> int:
