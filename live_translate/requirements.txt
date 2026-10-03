@@ -5,7 +5,7 @@ scipy>=1.10             # 고품질 리샘플링 (없으면 선형 보간으로 
 faster-whisper>=1.0.0   # 음성 인식
 
 # 번역 백엔드 - 하나만 있으면 됩니다 (기본값은 google)
-deep-translator>=1.11.4 # --translator google
+deep-translator>=1.11.4 # --translator google (구버전은 Google 엔드포인트가 자주 막힌다)
 
 # Windows 에서 PortAudio 가 loopback 장치를 못 줄 때 쓰는 대체 캡처 경로
 # (--backend soundcard, auto 일 때 자동 전환)

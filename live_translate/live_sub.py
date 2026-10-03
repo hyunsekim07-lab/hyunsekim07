@@ -811,6 +811,31 @@ class NullTranslator:
 
 RATE_LIMIT_HINTS = ("too many requests", "429", "rate limit", "quota")
 
+# MyMemory 는 'ja' 가 아니라 'ja-JP' 같은 지역 코드를 쓴다.
+MYMEMORY_PREFERRED = {"ja": "ja-JP", "ko": "ko-KR", "en": "en-US", "zh": "zh-CN",
+                      "es": "es-ES", "fr": "fr-FR", "de": "de-DE", "ru": "ru-RU"}
+
+
+def _mymemory_lang(lang: str) -> str:
+    """ISO 코드('ja')를 MyMemory 가 받는 코드('ja-JP')로 바꾼다."""
+    lang = lang.lower()
+    try:
+        from deep_translator.constants import MY_MEMORY_LANGUAGES_TO_CODES as table
+
+        codes = list(table.values())
+        for code in codes:                                   # 이미 지역 코드면 그대로
+            if code.lower() == lang:
+                return code
+        matches = [c for c in codes if c.lower().split("-")[0] == lang]
+        if matches:
+            preferred = MYMEMORY_PREFERRED.get(lang)
+            if preferred and preferred in matches:
+                return preferred
+            return sorted(matches)[0]
+    except Exception:                                        # noqa: BLE001
+        pass
+    return MYMEMORY_PREFERRED.get(lang, lang)
+
 
 def _is_rate_limited(exc: Exception) -> bool:
     return any(k in f"{type(exc).__name__}: {exc}".lower() for k in RATE_LIMIT_HINTS)
@@ -875,14 +900,11 @@ class GoogleTranslator:
             try:
                 from deep_translator import MyMemoryTranslator
 
-                try:
-                    self._backup = MyMemoryTranslator(source=self.src, target=self.dst)
-                except Exception:                            # noqa: BLE001
-                    # 일부 버전은 'ja-JP' 같은 지역 코드를 요구한다
-                    self._backup = MyMemoryTranslator(source=f"{self.src}-{self.src.upper()}",
-                                                      target=f"{self.dst}-{self.dst.upper()}")
+                self._backup = MyMemoryTranslator(source=_mymemory_lang(self.src),
+                                                  target=_mymemory_lang(self.dst))
             except Exception as exc:                         # noqa: BLE001
-                print(f"[trans] 대체 번역기도 쓸 수 없습니다: {exc}", file=sys.stderr)
+                print(f"[trans] 대체 번역기도 쓸 수 없습니다: {str(exc)[:160]}",
+                      file=sys.stderr)
                 self._backup_dead = True
                 return ""
         try:
