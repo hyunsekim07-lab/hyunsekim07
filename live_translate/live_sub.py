@@ -709,13 +709,34 @@ def _add_nvidia_dll_dirs() -> list[str]:
         for pkg in os.listdir(nvidia):
             for leaf in ("bin", "lib"):
                 path = os.path.join(nvidia, pkg, leaf)
-                if os.path.isdir(path):
-                    try:
-                        _DLL_DIR_HANDLES.append(os.add_dll_directory(path))
-                        added.append(path)
-                    except Exception:                        # noqa: BLE001
-                        pass
+                if not os.path.isdir(path) or not os.listdir(path):
+                    continue
+                try:
+                    _DLL_DIR_HANDLES.append(os.add_dll_directory(path))
+                except Exception:                            # noqa: BLE001
+                    pass
+                # add_dll_directory 는 파이썬이 여는 확장 모듈에만 적용된다.
+                # ctranslate2 처럼 네이티브 쪽에서 직접 LoadLibrary 하는 경우를 위해
+                # PATH 에도 넣어준다.
+                if path not in os.environ.get("PATH", ""):
+                    os.environ["PATH"] = path + os.pathsep + os.environ.get("PATH", "")
+                added.append(path)
     return added
+
+
+def _find_cuda_dlls(dirs: list[str]) -> list[str]:
+    """등록한 경로 안에 실제로 cublas/cudnn 파일이 있는지 확인한다."""
+    wanted = ("cublas64", "cudnn64", "cudnn_")
+    found = []
+    for path in dirs:
+        try:
+            for name in os.listdir(path):
+                low = name.lower()
+                if low.endswith((".dll", ".so")) and any(w in low for w in wanted):
+                    found.append(name)
+        except Exception:                                    # noqa: BLE001
+            continue
+    return sorted(set(found))[:4]
 
 
 def _looks_like_cuda_error(exc: Exception) -> bool:
@@ -739,7 +760,10 @@ class Recognizer:
         if device == "cuda":
             found = _add_nvidia_dll_dirs()
             if found:
-                print(f"[asr ] CUDA 라이브러리 경로 {len(found)}개 등록", flush=True)
+                names = _find_cuda_dlls(found)
+                print(f"[asr ] CUDA 경로 {len(found)}개 등록"
+                      + (f" — {', '.join(names)} 확인" if names else " — cublas/cudnn DLL 을 찾지 못함"),
+                      flush=True)
         if compute_type is None:
             compute_type = "float16" if device == "cuda" else "int8"
 
@@ -777,17 +801,25 @@ class Recognizer:
         """
         import numpy as np
 
-        silence = np.zeros(TARGET_SR // 2, dtype=np.float32)
+        # 무음을 넣으면 VAD 가 통째로 걸러서 모델이 '한 번도 안 돈다'.
+        # 그러면 cuBLAS 가 로드되지 않아 GPU 가 되는지 확인이 안 된다.
+        t = np.arange(TARGET_SR, dtype=np.float32) / TARGET_SR
+        probe = (0.2 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)
+
+        saved_vad, self.vad_filter = self.vad_filter, False
         try:
-            self._transcribe(silence)
+            self._transcribe(probe)
         except Exception as exc:                             # noqa: BLE001
             if not self._fallback_to_cpu(exc):
                 print(f"[asr ] 준비 확인 중 오류(계속 진행): {str(exc)[:120]}", file=sys.stderr)
+                self.vad_filter = saved_vad
                 return
             try:
-                self._transcribe(silence)
+                self._transcribe(probe)
             except Exception:                                # noqa: BLE001
                 pass
+        finally:
+            self.vad_filter = saved_vad
         if self.device == "cuda":
             print("[asr ] GPU(CUDA) 로 동작합니다.", flush=True)
         else:
@@ -940,6 +972,8 @@ class GoogleTranslator:
         self._backup_dead = False
         self._last_call = 0.0
         self._warned = False
+        self._fail_streak = 0
+        self._blocked_until = 0.0
 
     def _throttle(self) -> None:
         wait = self.MIN_INTERVAL - (time.monotonic() - self._last_call)
@@ -948,15 +982,26 @@ class GoogleTranslator:
         self._last_call = time.monotonic()
 
     def translate(self, text: str, src: str | None = None) -> str:
+        # 계속 막히는 중이면 재시도에 시간을 쓰지 않는다. 자막은 늦으면 쓸모가 없다.
+        if self._blocked_until > time.monotonic():
+            return self._via_backup(text)
+
         self._throttle()
-        for attempt in range(self.RETRIES):
+        retries = 1 if self._fail_streak >= 2 else self.RETRIES
+        for attempt in range(retries):
             try:
-                return (self._engine.translate(text) or "").strip()
+                result = (self._engine.translate(text) or "").strip()
+                self._fail_streak = 0
+                return result
             except Exception as exc:                         # noqa: BLE001
                 if not _is_rate_limited(exc):
                     raise
-                if attempt < self.RETRIES - 1:
-                    time.sleep(0.6 * (2 ** attempt))         # 0.6s -> 1.2s
+                if attempt < retries - 1:
+                    time.sleep(0.6 * (2 ** attempt))
+
+        self._fail_streak += 1
+        if self._fail_streak >= 3:                           # 한동안 아예 건너뛴다
+            self._blocked_until = time.monotonic() + 120
         return self._via_backup(text)
 
     def _via_backup(self, text: str) -> str:
@@ -1140,6 +1185,13 @@ def _subtitle_font() -> str:
     if system == "Darwin":
         return "Apple SD Gothic Neo"
     return "Noto Sans CJK KR"
+
+
+def _widget_alive(widget) -> bool:
+    try:
+        return bool(widget.winfo_exists())
+    except Exception:                                        # noqa: BLE001
+        return False
 
 
 class Overlay:
@@ -1426,7 +1478,7 @@ def _overlay_loop(out_q, stop, args):
         return
 
     def pump():
-        if overlay.closed:
+        if overlay.closed or not _widget_alive(overlay.root):
             stop.set()
             return
         drained = None
@@ -1437,15 +1489,25 @@ def _overlay_loop(out_q, stop, args):
                 break
         if drained is not None:
             translated, original, final = drained
-            overlay.show(translated, original, pending=not final)
+            try:
+                overlay.show(translated, original, pending=not final)
+            except Exception:                                # noqa: BLE001
+                stop.set()
+                return
             if final:
                 if args.show_source and translated:
                     print(f"  {original}")
                 print(f"> {translated or original}", flush=True)
-        overlay.root.after(60, pump)
+        try:
+            overlay.root.after(60, pump)
+        except Exception:                                    # noqa: BLE001
+            stop.set()                                       # 창이 사라지는 중
 
     overlay.root.after(60, pump)
-    overlay.root.mainloop()
+    try:
+        overlay.root.mainloop()
+    except Exception as exc:                                 # noqa: BLE001
+        print(f"[ui  ] 자막 창 종료: {str(exc)[:100]}", file=sys.stderr)
     stop.set()
 
 

@@ -136,4 +136,55 @@ except Exception:                                            # noqa: BLE001
     traceback.print_exc()
 
 
+section("6. GPU / CUDA 라이브러리")
+try:
+    import ctranslate2
+
+    count = ctranslate2.get_cuda_device_count()
+    print(f"ctranslate2 {getattr(ctranslate2, '__version__', '?')} — CUDA 장치 {count}개")
+except Exception as exc:                                     # noqa: BLE001
+    count = 0
+    print(f"ctranslate2 확인 실패: {exc}")
+
+try:
+    import os
+    import site
+
+    roots = set(site.getsitepackages())
+    try:
+        roots.add(site.getusersitepackages())
+    except Exception:                                        # noqa: BLE001
+        pass
+
+    any_found = False
+    for root in sorted(roots):
+        nvidia = os.path.join(root, "nvidia")
+        if not os.path.isdir(nvidia):
+            continue
+        any_found = True
+        print(f"\n{nvidia}")
+        for pkg in sorted(os.listdir(nvidia)):
+            for leaf in ("bin", "lib"):
+                path = os.path.join(nvidia, pkg, leaf)
+                if not os.path.isdir(path):
+                    continue
+                files = [f for f in os.listdir(path) if f.lower().endswith((".dll", ".so"))]
+                shown = ", ".join(sorted(files)[:6]) or "(비어 있음)"
+                print(f"  {pkg}/{leaf}: {len(files)}개 — {shown}")
+    if not any_found:
+        print("\nnvidia-* 패키지가 설치되어 있지 않습니다:")
+        print(f"    {sys.executable} -m pip install nvidia-cublas-cu12 nvidia-cudnn-cu12")
+
+    target = "cublas64_12.dll" if platform.system() == "Windows" else "libcublas.so.12"
+    hits = []
+    for root in roots:
+        for base, _dirs, files in os.walk(os.path.join(root, "nvidia")):
+            for name in files:
+                if name.lower().startswith(target.split(".")[0].lower()):
+                    hits.append(os.path.join(base, name))
+    print(f"\n{target} 검색 결과: {hits if hits else '찾지 못함'}")
+except Exception:                                            # noqa: BLE001
+    traceback.print_exc()
+
+
 print(f"\n{LINE}\n이 출력 전체를 그대로 복사해서 보내주세요.\n{LINE}")
