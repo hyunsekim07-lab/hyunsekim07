@@ -138,6 +138,46 @@ python live_sub.py --translator claude --claude-model claude-haiku-4-5
 
 ---
 
+## 3-1. 번역 품질과 인식 정확도
+
+**번역이 "번역기 돌린 말투" 로 나온다면** 백엔드 차이입니다.
+
+| 백엔드 | 문맥 | 말투 | 비고 |
+|---|---|---|---|
+| `local` (NLLB) | 문장 하나만 봄 | 기계 번역체 | 제한 없음, 오프라인 |
+| `google` | 문장 하나만 봄 | 기계 번역체 | 무료 제한에 잘 걸림 |
+| `claude` | **앞 대사 3줄을 같이 넘김** | **구어체 자막처럼** | API 키 필요 |
+
+주어가 자주 생략되는 구어체 대사에서 차이가 큽니다. 자연스러운 자막이 목적이면 `claude` 를 쓰세요.
+
+```powershell
+$env:ANTHROPIC_API_KEY="..."
+python live_sub.py --src ja --dst ko --translator claude
+```
+
+**맥락에 안 맞는 말이 나온다면** 번역이 아니라 '잘못 들은' 쪽일 때가 많습니다. 모델을 키우세요.
+
+```powershell
+python live_sub.py --src ja --dst ko --model medium      # 또는 large-v3
+```
+
+영상에 자주 나오는 이름이나 단어를 미리 알려주면 더 정확해집니다:
+
+```powershell
+python live_sub.py --src ja --dst ko --prompt "등장인물 이름, 자주 나오는 용어"
+```
+
+**한국어 영상처럼 원래 알아들을 수 있는 영상**이라면 `--src ja` 를 그대로 두면 안 됩니다.
+한국어 소리를 억지로 일본어로 받아쓰기 때문입니다. 자동 감지를 쓰세요:
+
+```powershell
+python live_sub.py --src auto --dst ko
+```
+
+문장마다 언어를 감지하고, 감지된 언어가 `--dst` 와 같으면 번역 없이 원문만 띄웁니다.
+
+---
+
 ## 4. 지연 시간 줄이기
 
 자막 지연 ≈ **발화 길이 + 인식 시간**. 둘 다 줄일 수 있습니다.

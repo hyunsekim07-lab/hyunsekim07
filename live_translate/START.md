@@ -165,6 +165,8 @@ python3 live_sub.py --device BlackHole --src ja --dst ko
 | 번역이 어색함 | `--translator claude` (품질 최상, `ANTHROPIC_API_KEY` 필요) |
 | `too many requests` 오류 반복 | Google 무료 번역 제한. `python -m pip install -U deep-translator` 후에도 그러면 `--translator local` |
 | `No module named '_tkinter'` | 맥: `brew install python-tk` / 급하면 `--console` 로 터미널 자막 |
-| 일본어가 아닌 영상 | `--src en`, `--src zh` 등으로 바꾸거나 `--src auto` |
+| 일본어가 아닌 영상 | `--src auto` (문장마다 감지, 한국어면 번역 안 하고 원문만) |
+| 번역이 기계 번역체 | `--translator claude` (앞 대사 3줄을 문맥으로 넘깁니다) |
+| 맥락에 안 맞는 말이 나옴 | 잘못 들은 것. `--model medium` 으로 키우거나 `--prompt "자주 나오는 단어"` |
 
 더 자세한 옵션은 [README.md](README.md) 또는 `python3 live_sub.py --help`.

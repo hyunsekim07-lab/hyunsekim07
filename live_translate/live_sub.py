@@ -686,7 +686,7 @@ def _looks_like_cuda_error(exc: Exception) -> bool:
 
 class Recognizer:
     def __init__(self, model_size: str, device: str, compute_type: str | None,
-                 language: str | None, beam_size: int):
+                 language: str | None, beam_size: int, initial_prompt: str | None = None):
         stubbed_av = _stub_av()
         try:
             from faster_whisper import WhisperModel
@@ -705,6 +705,7 @@ class Recognizer:
         self._WhisperModel = WhisperModel
         self.model_size = model_size
         self.language = language
+        self.initial_prompt = initial_prompt
         self.beam_size = beam_size
         self.vad_filter = True
         self.device = device
@@ -739,7 +740,8 @@ class Recognizer:
         self._load("cpu", "int8")
         return True
 
-    def transcribe(self, audio: np.ndarray) -> str:
+    def transcribe(self, audio: np.ndarray) -> tuple[str, str | None]:
+        """(인식된 문장, 감지된 언어코드) 를 돌려준다."""
         try:
             return self._transcribe(audio)
         except Exception as exc:                             # noqa: BLE001
@@ -747,7 +749,7 @@ class Recognizer:
                 return self._transcribe(audio)
             raise
 
-    def _transcribe(self, audio: np.ndarray) -> str:
+    def _transcribe(self, audio: np.ndarray) -> tuple[str, str | None]:
         kwargs = dict(
             language=self.language,
             beam_size=self.beam_size,
@@ -756,14 +758,21 @@ class Recognizer:
             no_speech_threshold=0.6,
             vad_filter=self.vad_filter,
         )
+        if self.initial_prompt:
+            kwargs["initial_prompt"] = self.initial_prompt
         try:
-            segments, _info = self.model.transcribe(audio, **kwargs)
+            segments, info = self.model.transcribe(audio, **kwargs)
         except Exception:                                    # noqa: BLE001
             if not self.vad_filter:
                 raise
             self.vad_filter = False                          # onnxruntime 없음 등
             kwargs["vad_filter"] = False
-            segments, _info = self.model.transcribe(audio, **kwargs)
+            segments, info = self.model.transcribe(audio, **kwargs)
+
+        language = getattr(info, "language", None) or self.language
+        confidence = getattr(info, "language_probability", 1.0) or 1.0
+        if self.language is None and confidence < 0.5:
+            language = None                                  # 자동 감지인데 확신이 없으면 비워둔다
 
         parts = []
         for seg in segments:
@@ -775,7 +784,7 @@ class Recognizer:
             if text:
                 parts.append(text)
         text = " ".join(parts).strip()
-        return "" if _is_junk(text) else text
+        return ("" if _is_junk(text) else text), language
 
 
 def _cuda_available() -> bool:
@@ -805,7 +814,7 @@ NLLB_CODES = {
 class NullTranslator:
     name = "none"
 
-    def translate(self, text: str) -> str:
+    def translate(self, text: str, src: str | None = None) -> str:
         return text
 
 
@@ -870,7 +879,7 @@ class GoogleTranslator:
             time.sleep(wait)
         self._last_call = time.monotonic()
 
-    def translate(self, text: str) -> str:
+    def translate(self, text: str, src: str | None = None) -> str:
         self._throttle()
         for attempt in range(self.RETRIES):
             try:
@@ -927,19 +936,26 @@ class LocalTranslator:
                 "로컬 번역에는 transformers 가 필요합니다:\n"
                 "    pip install transformers sentencepiece torch"
             ) from exc
-        if src not in NLLB_CODES or dst not in NLLB_CODES:
-            raise SystemExit(f"로컬 번역이 지원하지 않는 언어쌍입니다: {src} -> {dst}")
+        if dst not in NLLB_CODES:
+            raise SystemExit(f"로컬 번역이 지원하지 않는 대상 언어입니다: {dst}")
+        if src != "auto" and src not in NLLB_CODES:
+            raise SystemExit(f"로컬 번역이 지원하지 않는 원본 언어입니다: {src}")
 
         print(f"[trans] 로컬 번역 모델 로드 중: {model_id} ...", flush=True)
         self._torch = torch
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, src_lang=NLLB_CODES[src])
+        self.default_src = src if src != "auto" else "ja"
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_id, src_lang=NLLB_CODES[self.default_src])
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device).eval()
         self.dst_code = NLLB_CODES[dst]
         print("[trans] 준비 완료", flush=True)
 
-    def translate(self, text: str) -> str:
+    def translate(self, text: str, src: str | None = None) -> str:
+        lang = src if src in NLLB_CODES else self.default_src
+        if self.tokenizer.src_lang != NLLB_CODES[lang]:      # 문장마다 원본 언어를 맞춘다
+            self.tokenizer.src_lang = NLLB_CODES[lang]
         batch = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=256)
         batch = {k: v.to(self.device) for k, v in batch.items()}
         bos = self.tokenizer.convert_tokens_to_ids(self.dst_code)
@@ -962,8 +978,10 @@ class ClaudeTranslator:
         self.client = anthropic.Anthropic(timeout=20.0, max_retries=1)
         self.model = model
         self.history: deque[tuple[str, str]] = deque(maxlen=context)
+        source_desc = ("whatever language the line is spoken in" if src == "auto"
+                       else LANG_NAMES.get(src, src))
         self.system = (
-            f"You translate live subtitles from {LANG_NAMES.get(src, src)} "
+            f"You translate live subtitles from {source_desc} "
             f"to {LANG_NAMES.get(dst, dst)}.\n"
             "Rules:\n"
             "- Output ONLY the translation. No quotes, no notes, no romanization, "
@@ -974,7 +992,7 @@ class ClaudeTranslator:
             "- If the line is inaudible or meaningless filler, output nothing."
         )
 
-    def translate(self, text: str) -> str:
+    def translate(self, text: str, src: str | None = None) -> str:
         messages = []
         for source, target in self.history:
             messages.append({"role": "user", "content": source})
@@ -995,7 +1013,7 @@ class ClaudeTranslator:
 
 
 def build_translator(kind: str, src: str, dst: str, claude_model: str):
-    if kind == "none" or src == dst:
+    if kind == "none" or (src != "auto" and src == dst):
         return NullTranslator()
     if kind == "google":
         return GoogleTranslator(src, dst)
@@ -1145,7 +1163,8 @@ def run(args) -> int:
         return _calibrate(args)
 
     recognizer = Recognizer(args.model, args.device_type, args.compute_type,
-                            None if args.src == "auto" else args.src, args.beam_size)
+                            None if args.src == "auto" else args.src, args.beam_size,
+                            initial_prompt=args.prompt)
     translator = build_translator(args.translator, args.src, args.dst, args.claude_model)
     print(f"[trans] 백엔드: {translator.name}  ({args.src} -> {args.dst})")
 
@@ -1188,30 +1207,43 @@ def run(args) -> int:
             except queue.Empty:
                 continue
             try:
-                text = recognizer.transcribe(segment)
+                text, language = recognizer.transcribe(segment)
             except Exception as exc:                         # noqa: BLE001
                 print(f"[asr ] 오류: {exc}", file=sys.stderr)
                 continue
             if text:
-                text_q.put(text)
+                text_q.put((text, language))
 
     def translate_worker():
-        cache: dict[str, str] = {}
+        cache: dict[tuple[str, str | None], str] = {}
         last = ""
         last_error = ""
+        announced = set()
         while not stop.is_set():
             try:
-                text = text_q.get(timeout=0.2)
+                text, language = text_q.get(timeout=0.2)
             except queue.Empty:
                 continue
             if text == last:                                 # 같은 대사 반복 표시 방지
                 continue
             last = text
-            if text in cache:
-                out_q.put((cache[text], text))
+
+            if language and language == args.dst:            # 이미 보고 싶은 언어면 번역하지 않는다
+                if language not in announced:
+                    announced.add(language)
+                    print(f"[trans] 감지된 언어가 {language} 라 번역 없이 원문만 띄웁니다.")
+                out_q.put(("", text))
+                continue
+            if language and language not in announced:
+                announced.add(language)
+                print(f"[trans] 감지된 언어: {language}")
+
+            key = (text, language)
+            if key in cache:
+                out_q.put((cache[key], text))
                 continue
             try:
-                translated = translator.translate(text)
+                translated = translator.translate(text, src=language)
             except Exception as exc:                         # noqa: BLE001
                 message = f"{type(exc).__name__}: {exc}"[:200]
                 if message != last_error:                    # 같은 오류로 화면을 덮지 않는다
@@ -1222,7 +1254,7 @@ def run(args) -> int:
             else:
                 last_error = ""
             if translated:
-                cache[text] = translated
+                cache[key] = translated
                 if len(cache) > 500:
                     cache.pop(next(iter(cache)))
             out_q.put((translated, text))
@@ -1338,7 +1370,11 @@ def parse_args(argv=None):
     asr.add_argument("--device-type", default="auto", choices=["auto", "cuda", "cpu"])
     asr.add_argument("--compute-type", default=None, help="float16 / int8 / int8_float16 등")
     asr.add_argument("--beam-size", type=int, default=1, help="1이 가장 빠름")
-    asr.add_argument("--src", default="ja", help="원본 언어 (auto 면 자동 감지)")
+    asr.add_argument("--src", default="ja",
+                     help="원본 언어. auto 면 문장마다 자동 감지하고, "
+                          "감지된 언어가 --dst 와 같으면 번역 없이 원문만 띄웁니다")
+    asr.add_argument("--prompt", default=None,
+                     help="인식 힌트. 영상에 자주 나오는 단어/이름을 넣으면 정확도가 오릅니다")
 
     trans = parser.add_argument_group("번역")
     trans.add_argument("--dst", default="ko", help="번역 대상 언어")
