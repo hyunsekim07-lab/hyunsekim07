@@ -159,6 +159,29 @@ python3 live_sub.py --device BlackHole --src ja --dst ko
 
 ---
 
+## 제대로 번역되고 있는지 확인하기
+
+정답을 아는 일본어 문장으로 인식과 번역을 대조하는 테스트가 들어 있습니다.
+
+```bash
+python3 -m pip install edge-tts
+python3 selftest.py
+```
+
+일본어 음성을 만들어 **실제 live_sub 코드**(구간분할 → 인식 → 번역)에 통과시키고,
+문장마다 `들려준 일본어 / 인식한 일본어 / 번역 결과 / 참고 번역` 을 나란히 보여줍니다.
+인식 정확도는 백분율로 나오고, 번역이 비었거나 일본어가 그대로 남으면 `!!` 로 표시됩니다.
+
+```bash
+python3 selftest.py --text-only     # 번역만 확인 (음성 합성 없이, 빠름)
+python3 selftest.py --save-audio    # 스피커로 틀어볼 음성 파일만 생성
+```
+
+`--save-audio` 로 만든 파일을 재생하면서 다른 창에서 `live_sub.py` 를 실행하면
+**소리 캡처까지 포함한** 전체 경로를 확인할 수 있습니다.
+
+---
+
 ## 안 될 때
 
 | 증상 | 해결 |
