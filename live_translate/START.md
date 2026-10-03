@@ -163,6 +163,7 @@ python3 live_sub.py --device BlackHole --src ja --dst ko
 | `rms` 는 움직이는데 자막이 안 뜸 | 기준값이 높음. `--threshold 0.002` 를 붙여보세요 |
 | 자막이 영상보다 많이 느림 | `--model base --silence 300` 으로 가볍게 |
 | 번역이 어색함 | `--translator claude` (품질 최상, `ANTHROPIC_API_KEY` 필요) |
+| `too many requests` 오류 반복 | Google 무료 번역 제한. `python -m pip install -U deep-translator` 후에도 그러면 `--translator local` |
 | `No module named '_tkinter'` | 맥: `brew install python-tk` / 급하면 `--console` 로 터미널 자막 |
 | 일본어가 아닌 영상 | `--src en`, `--src zh` 등으로 바꾸거나 `--src auto` |
 

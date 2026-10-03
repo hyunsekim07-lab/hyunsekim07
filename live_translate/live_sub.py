@@ -809,20 +809,86 @@ class NullTranslator:
         return text
 
 
+RATE_LIMIT_HINTS = ("too many requests", "429", "rate limit", "quota")
+
+
+def _is_rate_limited(exc: Exception) -> bool:
+    return any(k in f"{type(exc).__name__}: {exc}".lower() for k in RATE_LIMIT_HINTS)
+
+
 class GoogleTranslator:
-    """deep-translator 경유. 설치가 가볍고 키가 필요 없다 (인식된 '문장'만 전송됨)."""
+    """deep-translator 경유. 설치가 가볍고 키가 필요 없다 (인식된 '문장'만 전송됨).
+
+    무료 Google 엔드포인트는 쉽게 레이트 리밋에 걸리므로
+    호출 간격 제한 -> 지수 백오프 재시도 -> 다른 무료 서비스(MyMemory) 순으로 버틴다.
+    """
 
     name = "google"
+    MIN_INTERVAL = 0.3                   # 초당 5회 제한에 여유를 둔다
+    RETRIES = 3
 
     def __init__(self, src: str, dst: str):
         try:
             from deep_translator import GoogleTranslator as _G
         except Exception as exc:                             # noqa: BLE001
             raise SystemExit(_import_help("deep_translator", "deep-translator", exc)) from exc
+        self.src, self.dst = src, dst
         self._engine = _G(source=src, target=dst)
+        self._backup = None
+        self._backup_dead = False
+        self._last_call = 0.0
+        self._warned = False
+
+    def _throttle(self) -> None:
+        wait = self.MIN_INTERVAL - (time.monotonic() - self._last_call)
+        if wait > 0:
+            time.sleep(wait)
+        self._last_call = time.monotonic()
 
     def translate(self, text: str) -> str:
-        return (self._engine.translate(text) or "").strip()
+        self._throttle()
+        for attempt in range(self.RETRIES):
+            try:
+                return (self._engine.translate(text) or "").strip()
+            except Exception as exc:                         # noqa: BLE001
+                if not _is_rate_limited(exc):
+                    raise
+                if attempt < self.RETRIES - 1:
+                    time.sleep(0.6 * (2 ** attempt))         # 0.6s -> 1.2s
+        return self._via_backup(text)
+
+    def _via_backup(self, text: str) -> str:
+        """Google 이 계속 막으면 다른 무료 서비스로 넘긴다."""
+        if self._backup_dead:
+            return ""
+        if not self._warned:
+            self._warned = True
+            print(
+                "\n[trans] Google 무료 번역이 계속 막힙니다. MyMemory 로 우회합니다.\n"
+                "        계속 이러면 아래 중 하나를 쓰세요:\n"
+                "          python -m pip install -U deep-translator   (구버전이면 자주 막힙니다)\n"
+                "          --translator local    (전부 내 컴퓨터에서, 제한 없음)\n"
+                "          --translator claude   (품질 최상, ANTHROPIC_API_KEY 필요)\n",
+                flush=True,
+            )
+        if self._backup is None:
+            try:
+                from deep_translator import MyMemoryTranslator
+
+                try:
+                    self._backup = MyMemoryTranslator(source=self.src, target=self.dst)
+                except Exception:                            # noqa: BLE001
+                    # 일부 버전은 'ja-JP' 같은 지역 코드를 요구한다
+                    self._backup = MyMemoryTranslator(source=f"{self.src}-{self.src.upper()}",
+                                                      target=f"{self.dst}-{self.dst.upper()}")
+            except Exception as exc:                         # noqa: BLE001
+                print(f"[trans] 대체 번역기도 쓸 수 없습니다: {exc}", file=sys.stderr)
+                self._backup_dead = True
+                return ""
+        try:
+            return (self._backup.translate(text) or "").strip()
+        except Exception:                                    # noqa: BLE001
+            return ""
 
 
 class LocalTranslator:
@@ -1110,6 +1176,7 @@ def run(args) -> int:
     def translate_worker():
         cache: dict[str, str] = {}
         last = ""
+        last_error = ""
         while not stop.is_set():
             try:
                 text = text_q.get(timeout=0.2)
@@ -1124,8 +1191,14 @@ def run(args) -> int:
             try:
                 translated = translator.translate(text)
             except Exception as exc:                         # noqa: BLE001
-                print(f"[trans] 오류: {exc}", file=sys.stderr)
+                message = f"{type(exc).__name__}: {exc}"[:200]
+                if message != last_error:                    # 같은 오류로 화면을 덮지 않는다
+                    last_error = message
+                    print(f"[trans] 오류: {message}\n        (같은 오류는 더 표시하지 않습니다. "
+                          f"자막은 원문으로 계속 나옵니다.)", file=sys.stderr)
                 translated = ""
+            else:
+                last_error = ""
             if translated:
                 cache[text] = translated
                 if len(cache) > 500:
