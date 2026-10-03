@@ -141,6 +141,11 @@ python3 live_sub.py --src ja --dst ko
 python3 live_sub.py --device BlackHole --src ja --dst ko
 ```
 
+윈도우는 **`run.bat` 더블클릭**으로도 됩니다 (일본어 -> 한국어, 로컬 번역, medium 모델).
+
+> **`--src auto` 는 권장하지 않습니다.** 짧은 대사가 많으면 Whisper 의 언어 감지가 자주 틀리고,
+> 틀린 쪽으로 인식해 버립니다. 보려는 영상의 언어를 `--src` 로 직접 지정하는 편이 훨씬 정확합니다.
+
 **첫 실행은 1~3분 걸립니다** — Whisper 모델(약 500MB)을 한 번 받습니다. 다음부터는 바로 뜹니다.
 
 `[ok  ] 실행 중` 이 보이면 영상을 재생하세요. 화면 아래에 자막 창이 뜹니다.
