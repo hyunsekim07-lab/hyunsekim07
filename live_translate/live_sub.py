@@ -27,6 +27,7 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 TARGET_SR = 16000          # Whisper 입력 샘플레이트
 FRAME_MS = 30              # VAD 프레임 길이
+RECORD_MS = 100            # soundcard 한 번에 읽는 길이 (너무 짧으면 끊김이 생긴다)
 
 
 def _stub_av() -> bool:
@@ -360,6 +361,14 @@ class SoundcardCapture:
         except Exception as exc:                             # noqa: BLE001
             raise SystemExit(_import_help("soundcard", "soundcard", exc)) from exc
 
+        # soundcard 는 끊김 경고를 'always' 로 띄워 화면을 덮는다. 한 번만 보이게 바꾼다.
+        try:
+            import warnings
+
+            warnings.filterwarnings("once", message=".*discontinuity.*")
+        except Exception:                                    # noqa: BLE001
+            pass
+
         self.sc = sc
         self.q = out_queue
         self.mic = _pick_soundcard_mic(sc, spec)
@@ -392,7 +401,7 @@ class SoundcardCapture:
         last: Exception | None = None
         # 16 kHz 로 바로 받으면 리샘플링(scipy)이 아예 필요 없다.
         for rate in (TARGET_SR, 48000, 44100):
-            block = int(rate * FRAME_MS / 1000)
+            block = int(rate * RECORD_MS / 1000)
             try:
                 with self.mic.recorder(samplerate=rate, channels=self.channels,
                                        blocksize=block) as rec:
@@ -630,6 +639,51 @@ def _is_junk(text: str) -> bool:
     return len(set(stripped)) <= 2 and len(stripped) >= 6
 
 
+CUDA_ERROR_HINTS = ("cublas", "cudnn", "cuda", "libcu", "gpu")
+
+
+def _add_nvidia_dll_dirs() -> list[str]:
+    """pip 로 설치한 nvidia-* 패키지의 DLL 폴더를 Windows DLL 검색 경로에 넣는다.
+
+    nvidia-cublas-cu12 / nvidia-cudnn-cu12 는 site-packages 안에 DLL 을 두는데
+    그 경로는 기본 검색 대상이 아니라서, 넣어주지 않으면 못 찾는다.
+    """
+    if platform.system() != "Windows" or not hasattr(os, "add_dll_directory"):
+        return []
+
+    try:
+        import site
+
+        roots = set(site.getsitepackages())
+        try:
+            roots.add(site.getusersitepackages())
+        except Exception:                                    # noqa: BLE001
+            pass
+    except Exception:                                        # noqa: BLE001
+        roots = set()
+
+    added = []
+    for root in roots:
+        nvidia = os.path.join(root, "nvidia")
+        if not os.path.isdir(nvidia):
+            continue
+        for pkg in os.listdir(nvidia):
+            for leaf in ("bin", "lib"):
+                path = os.path.join(nvidia, pkg, leaf)
+                if os.path.isdir(path):
+                    try:
+                        os.add_dll_directory(path)
+                        added.append(path)
+                    except Exception:                        # noqa: BLE001
+                        pass
+    return added
+
+
+def _looks_like_cuda_error(exc: Exception) -> bool:
+    text = f"{type(exc).__name__}: {exc}".lower()
+    return any(k in text for k in CUDA_ERROR_HINTS)
+
+
 class Recognizer:
     def __init__(self, model_size: str, device: str, compute_type: str | None,
                  language: str | None, beam_size: int):
@@ -643,21 +697,57 @@ class Recognizer:
 
         if device == "auto":
             device = "cuda" if _cuda_available() else "cpu"
+        if device == "cuda":
+            _add_nvidia_dll_dirs()
         if compute_type is None:
             compute_type = "float16" if device == "cuda" else "int8"
 
-        print(f"[asr ] 모델 로드 중: {model_size} ({device}/{compute_type}) ...", flush=True)
-        try:
-            self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
-        except Exception:                                    # noqa: BLE001
-            print("[asr ] 해당 설정 실패 -> cpu/int8 로 재시도", flush=True)
-            self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        self._WhisperModel = WhisperModel
+        self.model_size = model_size
         self.language = language
         self.beam_size = beam_size
         self.vad_filter = True
+        self.device = device
+        self.compute_type = compute_type
+        self.model = None
+        self._load(device, compute_type)
+
+    def _load(self, device: str, compute_type: str) -> None:
+        print(f"[asr ] 모델 로드 중: {self.model_size} ({device}/{compute_type}) ...", flush=True)
+        try:
+            self.model = self._WhisperModel(self.model_size, device=device,
+                                            compute_type=compute_type)
+            self.device, self.compute_type = device, compute_type
+        except Exception as exc:                             # noqa: BLE001
+            if device == "cpu":
+                raise SystemExit(f"음성 인식 모델을 불러오지 못했습니다: {exc}") from exc
+            print(f"[asr ] {device} 실패({exc}) -> cpu 로 전환", flush=True)
+            self._load("cpu", "int8")
+            return
         print("[asr ] 준비 완료", flush=True)
 
+    def _fallback_to_cpu(self, exc: Exception) -> bool:
+        """GPU 추론이 실패하면 CPU 로 갈아탄다. 전환했으면 True."""
+        if self.device != "cuda" or not _looks_like_cuda_error(exc):
+            return False
+        print(
+            f"\n[asr ] GPU 추론 실패: {exc}\n"
+            "[asr ] CUDA 라이브러리가 없어 CPU 로 전환합니다. 자막은 계속 나옵니다.\n"
+            "       GPU 를 쓰려면:  pip install nvidia-cublas-cu12 nvidia-cudnn-cu12\n",
+            flush=True,
+        )
+        self._load("cpu", "int8")
+        return True
+
     def transcribe(self, audio: np.ndarray) -> str:
+        try:
+            return self._transcribe(audio)
+        except Exception as exc:                             # noqa: BLE001
+            if self._fallback_to_cpu(exc):
+                return self._transcribe(audio)
+            raise
+
+    def _transcribe(self, audio: np.ndarray) -> str:
         kwargs = dict(
             language=self.language,
             beam_size=self.beam_size,
