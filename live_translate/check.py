@@ -19,13 +19,16 @@ OK, WARN, BAD = "[ OK ]", "[ ? ]", "[ X ]"
 PACKAGES = [                        # (import 이름, pip 이름, 필수 여부, 설명)
     ("numpy", "numpy", True, "숫자 계산"),
     ("sounddevice", "sounddevice", True, "오디오 캡처"),
-    ("scipy", "scipy", True, "리샘플링"),
     ("faster_whisper", "faster-whisper", True, "음성 인식"),
+    ("soundcard", "soundcard", False, "Windows 스피커 소리 캡처"),
+    ("scipy", "scipy", False, "리샘플링 (없어도 동작)"),
     ("deep_translator", "deep-translator", False, "번역 (--translator google)"),
-    ("soundcard", "soundcard", False, "Windows loopback 대체 경로"),
     ("anthropic", "anthropic", False, "번역 (--translator claude)"),
     ("transformers", "transformers", False, "번역 (--translator local)"),
 ]
+
+BLOCKED_HINTS = ("애플리케이션 제어 정책", "application control policy",
+                 "DLL load failed", "WinError 1260")
 
 todo: list[str] = []
 blockers: list[str] = []
@@ -54,33 +57,73 @@ def check_python() -> None:
 
 # ---------------------------------------------------------------- 2. 패키지
 def check_packages() -> None:
+    """설치 여부가 아니라 '실제로 불러와지는지' 를 본다.
+
+    설치는 됐는데 확장 모듈(.pyd/.dll)이 차단되어 못 쓰는 경우가 있어서,
+    find_spec 만 보면 멀쩡해 보이는데 실행은 실패한다.
+    """
+    import importlib
     import importlib.util
 
-    head("2. 파이썬 패키지")
-    missing_required, missing_optional = [], []
+    head("2. 파이썬 패키지 (실제로 불러와지는지까지 확인)")
+    missing_required, missing_optional, broken = [], [], []
 
     for module, pkg, required, note in PACKAGES:
         try:
-            found = importlib.util.find_spec(module) is not None
+            installed = importlib.util.find_spec(module) is not None
         except Exception:                                    # noqa: BLE001
-            found = False
-        if found:
+            installed = False
+
+        if not installed:
+            mark = BAD if required else WARN
+            tail = "" if required else " (선택)"
+            print(f"{mark} {pkg:<18} {note}  <- 없음{tail}")
+            (missing_required if required else missing_optional).append(pkg)
+            continue
+
+        try:
+            importlib.import_module(module)
             print(f"{OK} {pkg:<18} {note}")
-        elif required:
-            print(f"{BAD} {pkg:<18} {note}  <- 없음")
-            missing_required.append(pkg)
-        else:
-            print(f"{WARN} {pkg:<18} {note}  <- 없음 (선택)")
-            missing_optional.append(pkg)
+        except Exception as exc:                             # noqa: BLE001
+            reason = f"{type(exc).__name__}: {exc}"
+            print(f"{BAD} {pkg:<18} {note}  <- 설치는 됐는데 불러오기 실패")
+            print(f"       {reason[:120]}")
+            broken.append((pkg, reason, required))
 
     if missing_required:
-        cmd = f"{pip_cmd()} {' '.join(missing_required)}"
-        blockers.append(f"필수 패키지를 설치하세요:\n    {cmd}")
-    if not missing_required and "deep-translator" in missing_optional:
-        todo.append(
-            "번역기가 하나도 없습니다. 하나는 깔아야 합니다:\n"
-            f"    {pip_cmd()} deep-translator"
+        blockers.append(
+            f"필수 패키지를 설치하세요:\n    {pip_cmd()} {' '.join(missing_required)}"
         )
+
+    if broken:
+        _report_broken(broken)
+
+    if "deep-translator" in missing_optional and "anthropic" in missing_optional:
+        todo.append(f"번역기가 없습니다:\n    {pip_cmd()} deep-translator")
+
+
+def _report_broken(broken) -> None:
+    """불러오기 실패한 패키지를 '차단된 것' 과 '그 외' 로 나눠 안내한다."""
+    blocked = [(p, r) for p, r, _ in broken if any(h in r for h in BLOCKED_HINTS)]
+    names = {p for p, _, _ in broken}
+
+    if blocked:
+        print(f"\n{WARN} 확장 모듈(.pyd)이 Windows 에 의해 차단된 것으로 보입니다.")
+        print("       '스마트 앱 제어(Smart App Control)' 가 서명 없는 파일을 막을 때 나는 증상입니다.")
+
+    # scipy 는 없어도 되고, av 는 실시간 캡처에 안 쓰이므로 자동 우회된다.
+    fatal = names - {"scipy"}
+    if "faster-whisper" in fatal:
+        blockers.append(
+            "faster-whisper 를 불러오지 못합니다.\n"
+            "    대부분 av(PyAV) 의 _core.pyd 가 차단된 경우이고, live_sub.py 가 자동 우회하므로\n"
+            "    일단 그냥 실행해보세요:\n"
+            f"        {sys.executable} live_sub.py --src ja --dst ko\n"
+            "    그래도 안 되면 Windows 보안 -> 앱 및 브라우저 제어 -> 스마트 앱 제어 -> 끄기\n"
+            f"    전체 원인:  {sys.executable} diag.py"
+        )
+    if "scipy" in names:
+        todo.append("scipy 가 차단됐지만 없어도 동작합니다 (16 kHz 로 직접 받습니다). 무시하세요.")
 
 
 # ---------------------------------------------------------------- 3. tkinter

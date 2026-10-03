@@ -24,6 +24,36 @@ TARGET_SR = 16000          # Whisper 입력 샘플레이트
 FRAME_MS = 30              # VAD 프레임 길이
 
 
+def _stub_av() -> bool:
+    """av(PyAV) 를 불러올 수 없는 환경에서도 faster-whisper 를 쓰게 한다.
+
+    av 는 faster_whisper/audio.py 의 decode_audio() 안에서만 쓰이고, 그 함수는
+    '오디오 파일' 을 읽을 때만 호출된다. 우리는 항상 numpy 배열을 직접 넘기므로
+    실제로 쓰이지 않는데, 모듈 최상단의 `import av` 때문에 전체가 죽는다.
+    (Windows 스마트 앱 제어가 av/_core.pyd 를 차단하는 경우가 대표적이다.)
+    """
+    import importlib
+    import types
+
+    try:
+        importlib.import_module("av")
+        return False
+    except Exception:                                        # noqa: BLE001
+        pass
+
+    class _Unavailable(types.ModuleType):
+        def __getattr__(self, name):
+            if name.startswith("__"):
+                raise AttributeError(name)
+            raise RuntimeError(
+                "이 환경에서는 av(PyAV) 를 불러올 수 없어 오디오 '파일' 디코딩은 쓸 수 없습니다.\n"
+                "실시간 캡처에는 영향이 없습니다."
+            )
+
+    sys.modules["av"] = _Unavailable("av")
+    return True
+
+
 def _import_help(module: str, pip_name: str, exc: Exception) -> str:
     """'설치가 안 된 것' 과 '설치는 됐는데 불러오기가 실패한 것' 을 구분해서 알려준다."""
     import importlib.util
@@ -261,7 +291,7 @@ class SoundcardCapture:
     콜백이 아니라 블로킹 read 라서 전용 스레드에서 돌린다.
     """
 
-    def __init__(self, spec, out_queue: "queue.Queue[np.ndarray]", samplerate: int = 48000):
+    def __init__(self, spec, out_queue: "queue.Queue[np.ndarray]"):
         try:
             import soundcard as sc
         except Exception as exc:                             # noqa: BLE001
@@ -270,9 +300,8 @@ class SoundcardCapture:
         self.sc = sc
         self.q = out_queue
         self.mic = _pick_soundcard_mic(sc, spec)
-        self.native_sr = samplerate
+        self.native_sr = TARGET_SR
         self.channels = 2
-        self.block = int(samplerate * FRAME_MS / 1000)
         self.label = f"[soundcard] {self.mic.name}"
         self.error: Exception | None = None
         self._resampler = _make_resampler()
@@ -288,21 +317,30 @@ class SoundcardCapture:
             raise SystemExit(f"soundcard 로 소리를 열지 못했습니다: {self.error}")
 
     def _loop(self) -> None:
-        try:
-            with self.mic.recorder(samplerate=self.native_sr,
-                                   channels=self.channels,
-                                   blocksize=self.block) as rec:
-                self._ready.set()
-                while not self._stop.is_set():
-                    data = rec.record(numframes=self.block)
-                    if data is None or len(data) == 0:
-                        continue
-                    data = np.asarray(data, dtype=np.float32)
-                    mono = data.mean(axis=1) if data.ndim > 1 and data.shape[1] > 1 else data.reshape(-1)
-                    self.q.put(self._resampler(mono, self.native_sr))
-        except Exception as exc:                             # noqa: BLE001
-            self.error = exc
-            self._ready.set()
+        last: Exception | None = None
+        # 16 kHz 로 바로 받으면 리샘플링(scipy)이 아예 필요 없다.
+        for rate in (TARGET_SR, 48000, 44100):
+            block = int(rate * FRAME_MS / 1000)
+            try:
+                with self.mic.recorder(samplerate=rate, channels=self.channels,
+                                       blocksize=block) as rec:
+                    self.native_sr = rate
+                    self._ready.set()
+                    while not self._stop.is_set():
+                        data = rec.record(numframes=block)
+                        if data is None or len(data) == 0:
+                            continue
+                        data = np.asarray(data, dtype=np.float32)
+                        mono = (data.mean(axis=1) if data.ndim > 1 and data.shape[1] > 1
+                                else data.reshape(-1))
+                        self.q.put(self._resampler(mono, rate))
+                return
+            except Exception as exc:                         # noqa: BLE001
+                last = exc
+                if self._ready.is_set():                     # 열린 뒤 끊긴 것이면 재시도하지 않는다
+                    break
+        self.error = last
+        self._ready.set()
 
     def stop(self) -> None:
         self._stop.set()
@@ -523,10 +561,13 @@ def _is_junk(text: str) -> bool:
 class Recognizer:
     def __init__(self, model_size: str, device: str, compute_type: str | None,
                  language: str | None, beam_size: int):
+        stubbed_av = _stub_av()
         try:
             from faster_whisper import WhisperModel
         except Exception as exc:                             # noqa: BLE001
             raise SystemExit(_import_help("faster_whisper", "faster-whisper", exc)) from exc
+        if stubbed_av:
+            print("[asr ] av(PyAV) 를 불러올 수 없어 우회했습니다 — 실시간 캡처에는 무관합니다.")
 
         if device == "auto":
             device = "cuda" if _cuda_available() else "cpu"
