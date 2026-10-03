@@ -36,7 +36,7 @@ python live_sub.py --list-devices
 
 | OS | 무엇을 고르나 | 추가 설치 |
 |---|---|---|
-| **Windows** | 목록의 **출력(out)** 장치 번호. WASAPI loopback으로 자동 전환됩니다 | 없음 |
+| **Windows** | `<= 스피커 소리` 표시가 붙은 입력 장치 (자동 선택됨) | 없음 |
 | **Linux** | 이름에 `monitor` 가 들어간 입력 장치 (예: `pulse` / `...Monitor of...`) | 없음 (PulseAudio/PipeWire) |
 | **macOS** | [BlackHole](https://existential.audio/blackhole/) 같은 가상 출력 장치 | BlackHole 설치 후, 소리 출력을 멀티출력 장치로 |
 

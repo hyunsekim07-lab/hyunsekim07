@@ -135,20 +135,44 @@ def check_audio() -> None:
 
 
 def _check_windows(sd, devices, hostapis) -> None:
-    wasapi_out = [
-        (i, d) for i, d in enumerate(devices)
-        if d["max_output_channels"] > 0
-        and hostapis[d["hostapi"]]["name"].startswith("Windows WASAPI")
-    ]
-    if wasapi_out:
-        print(f"{OK} WASAPI 출력 장치가 있어 추가 설치 없이 바로 됩니다.")
-        for i, d in wasapi_out[:4]:
+    """스피커 소리는 WASAPI 'loopback' 입력 장치로만 잡을 수 있다.
+
+    그런 장치인지는 PortAudio 의 PaWasapi_IsLoopback 으로만 구분된다
+    (이름만 봐서는 일반 마이크 입력과 구별되지 않는다).
+    """
+    try:
+        is_loopback = sd._lib.PaWasapi_IsLoopback
+    except Exception:                                        # noqa: BLE001
+        print(f"{BAD} 이 sounddevice 빌드에는 WASAPI loopback 기능이 없습니다.")
+        blockers.append(f"sounddevice 를 올리세요:\n    {pip_cmd()} -U sounddevice")
+        return
+
+    found = []
+    for i, d in enumerate(devices):
+        if d["max_input_channels"] <= 0:
+            continue
+        if not hostapis[d["hostapi"]]["name"].startswith("Windows WASAPI"):
+            continue
+        try:
+            if is_loopback(i) > 0:
+                found.append((i, d))
+        except Exception:                                    # noqa: BLE001
+            continue
+
+    if found:
+        print(f"{OK} 스피커 소리를 잡을 수 있는 loopback 입력 장치가 있습니다.")
+        for i, d in found[:6]:
             print(f"       {i:>3}  {d['name']}")
-        print("\n       별도 설정 없이 그냥 실행하면 기본 출력 장치를 자동으로 잡습니다.")
+        print("\n       그냥 실행하면 지금 소리가 나가는 장치를 자동으로 고릅니다.")
     else:
-        print(f"{WARN} WASAPI 출력 장치를 못 찾았습니다. sounddevice 를 올려보세요:")
-        print(f"       {pip_cmd()} -U sounddevice")
-        todo.append(f"sounddevice 를 0.5.0 이상으로 올리세요: {pip_cmd()} -U sounddevice")
+        print(f"{BAD} WASAPI loopback 입력 장치를 찾지 못했습니다.")
+        print("       스피커로 나가는 소리를 가져올 통로가 없는 상태입니다.")
+        blockers.append(
+            "다음 중 하나를 하세요:\n"
+            f"    a) {pip_cmd()} -U sounddevice   (최신 PortAudio 에 loopback 이 들어있습니다)\n"
+            "    b) 소리 설정 -> 입력에서 '스테레오 믹스' 를 켜고 그 장치를 --device 로 지정\n"
+            "    c) VB-CABLE 같은 가상 오디오 장치 설치"
+        )
 
 
 def _check_macos(devices) -> None:

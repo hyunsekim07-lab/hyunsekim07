@@ -159,7 +159,7 @@ python3 live_sub.py --device BlackHole --src ja --dst ko
 | 증상 | 해결 |
 |---|---|
 | 자막 창은 떴는데 계속 "대기 중" | 소리를 못 잡는 중. `python3 live_sub.py --calibrate` 로 확인 |
-| `rms` 가 계속 0 | 맥이면 5-2/5-3 확인. 윈도우면 `--list-devices` 후 **출력** 장치 번호를 `--device` 로 지정 |
+| `rms` 가 계속 0 | 맥이면 5-2/5-3 확인. 윈도우면 `--list-devices` 후 `<= 스피커 소리` 표시된 번호를 `--device` 로 지정 |
 | `rms` 는 움직이는데 자막이 안 뜸 | 기준값이 높음. `--threshold 0.002` 를 붙여보세요 |
 | 자막이 영상보다 많이 느림 | `--model base --silence 300` 으로 가볍게 |
 | 번역이 어색함 | `--translator claude` (품질 최상, `ANTHROPIC_API_KEY` 필요) |

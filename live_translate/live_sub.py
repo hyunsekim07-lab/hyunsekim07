@@ -36,17 +36,22 @@ def _hostapi_name(sd, dev) -> str:
 
 
 def list_devices(sd) -> None:
+    loopback = {i for i, _ in loopback_inputs(sd)}
     print(f"{'idx':>4}  {'in':>3} {'out':>3}  {'rate':>6}  host / name")
     print("-" * 78)
     for i, dev in enumerate(sd.query_devices()):
+        mark = "  <= 스피커 소리" if i in loopback else ""
         print(
             f"{i:>4}  {dev['max_input_channels']:>3} {dev['max_output_channels']:>3}"
             f"  {int(dev['default_samplerate']):>6}"
-            f"  [{_hostapi_name(sd, dev)}] {dev['name']}"
+            f"  [{_hostapi_name(sd, dev)}] {dev['name']}{mark}"
         )
+    if loopback:
+        print(f"\n'<= 스피커 소리' 표시가 붙은 번호를 --device 로 주면 됩니다.")
+        print("지정하지 않으면 지금 소리가 나가는 장치를 자동으로 고릅니다.")
     print(
         "\n스피커로 나가는 소리를 잡으려면:"
-        "\n  Windows  : 위 목록의 '출력' 장치 번호를 --device 로 주면 자동 loopback"
+        "\n  Windows  : 위에서 '<= 스피커 소리' 로 표시된 입력 장치 (자동 선택됨)"
         "\n  Linux    : 이름에 'monitor' 가 들어간 입력 장치"
         "\n  macOS    : BlackHole / Loopback 같은 가상 출력 장치를 먼저 설치"
     )
@@ -60,30 +65,71 @@ def _find_by_name(sd, needle: str) -> int:
     raise SystemExit(f"'{needle}' 와 일치하는 오디오 장치가 없습니다. --list-devices 로 확인하세요.")
 
 
-def _wasapi_loopback(sd, idx):
-    """Windows 출력 장치를 입력처럼 열기 위한 extra_settings (없으면 None)."""
-    dev = sd.query_devices(idx)
-    if not _hostapi_name(sd, dev).startswith("Windows WASAPI"):
-        return None
-    if dev["max_input_channels"] > 0:
-        return None                      # 진짜 입력 장치면 loopback 불필요
+def _norm(name: str) -> str:
+    """장치 이름 비교용 정규화 (loopback 장치는 원본 출력 장치와 이름이 같거나 접미사만 다르다)."""
+    return re.sub(r"[\s\[\]()]+", "", name.lower().replace("loopback", ""))
+
+
+def loopback_inputs(sd) -> list[tuple[int, dict]]:
+    """WASAPI loopback 입력 장치 [(index, device_info)].
+
+    PortAudio 는 스피커로 나가는 소리를 '입력 장치' 형태로 따로 노출하고,
+    그 장치인지는 PaWasapi_IsLoopback 으로만 구분할 수 있다.
+    """
+    if platform.system() != "Windows":
+        return []
     try:
-        return sd.WasapiSettings(loopback=True)
-    except TypeError as exc:             # sounddevice < 0.5.0
+        is_loopback = sd._lib.PaWasapi_IsLoopback
+    except Exception:                    # noqa: BLE001  (다른 플랫폼엔 심볼이 없다)
+        return []
+
+    found = []
+    for i, dev in enumerate(sd.query_devices()):
+        if dev["max_input_channels"] <= 0:
+            continue
+        if not _hostapi_name(sd, dev).startswith("Windows WASAPI"):
+            continue
+        try:
+            if is_loopback(i) > 0:
+                found.append((i, dev))
+        except Exception:                # noqa: BLE001
+            continue
+    return found
+
+
+def _to_loopback(sd, idx: int) -> int:
+    """출력 장치를 지정했으면 같은 이름의 loopback 입력 장치로 바꿔준다."""
+    dev = sd.query_devices(idx)
+    if dev["max_input_channels"] > 0:
+        return idx                       # 이미 입력 장치
+    candidates = loopback_inputs(sd)
+    if not candidates:
         raise SystemExit(
-            "WASAPI loopback 은 sounddevice 0.5.0 이상이 필요합니다:\n"
-            "    pip install -U sounddevice"
-        ) from exc
+            f"'{dev['name']}' 는 출력 전용 장치라 소리를 받을 수 없고,\n"
+            "WASAPI loopback 입력 장치도 찾지 못했습니다.\n\n"
+            "해결 방법:\n"
+            "  1) pip install -U sounddevice  (loopback 지원은 최신 PortAudio 가 필요합니다)\n"
+            "  2) 또는 Windows 소리 설정에서 '스테레오 믹스' 를 켜고 그 장치를 --device 로 지정\n"
+            "  3) 또는 VB-CABLE 같은 가상 오디오 장치 설치\n\n"
+            "현재 장치 목록:  python live_sub.py --list-devices"
+        )
+    target = _norm(dev["name"])
+    for i, cand in candidates:           # 같은 이름의 loopback 을 우선
+        if _norm(cand["name"]) == target:
+            return i
+    return candidates[0][0]
 
 
 def resolve_device(sd, spec):
     """--device 값(또는 None)으로부터 (index, extra_settings, 표시이름)."""
     if spec is not None:
         idx = int(spec) if re.fullmatch(r"-?\d+", str(spec).strip()) else _find_by_name(sd, spec)
+        if platform.system() == "Windows":
+            idx = _to_loopback(sd, idx)
     else:
         idx = _auto_device(sd)
     dev = sd.query_devices(idx)
-    return idx, _wasapi_loopback(sd, idx), f"[{_hostapi_name(sd, dev)}] {dev['name']}"
+    return idx, None, f"[{_hostapi_name(sd, dev)}] {dev['name']}"
 
 
 def _auto_device(sd) -> int:
@@ -91,13 +137,21 @@ def _auto_device(sd) -> int:
     devices = list(sd.query_devices())
 
     if system == "Windows":
-        # 기본 출력 장치를 WASAPI loopback 으로 연다.
-        for api in sd.query_hostapis():
-            if api["name"].startswith("Windows WASAPI") and api["default_output_device"] >= 0:
-                return api["default_output_device"]
-        default_out = sd.default.device[1]
-        if default_out is not None and default_out >= 0:
-            return default_out
+        candidates = loopback_inputs(sd)
+        if candidates:
+            default_out = None
+            for api in sd.query_hostapis():
+                if api["name"].startswith("Windows WASAPI") and api["default_output_device"] >= 0:
+                    default_out = sd.query_devices(api["default_output_device"])
+                    break
+            if default_out is None and sd.default.device[1] is not None and sd.default.device[1] >= 0:
+                default_out = sd.query_devices(sd.default.device[1])
+            if default_out is not None:          # 지금 소리가 나가는 장치와 같은 것을 고른다
+                target = _norm(default_out["name"])
+                for i, cand in candidates:
+                    if _norm(cand["name"]) == target:
+                        return i
+            return candidates[0][0]
 
     if system == "Linux":
         for i, dev in enumerate(devices):
