@@ -24,6 +24,24 @@ TARGET_SR = 16000          # Whisper 입력 샘플레이트
 FRAME_MS = 30              # VAD 프레임 길이
 
 
+def _import_help(module: str, pip_name: str, exc: Exception) -> str:
+    """'설치가 안 된 것' 과 '설치는 됐는데 불러오기가 실패한 것' 을 구분해서 알려준다."""
+    import importlib.util
+
+    try:
+        installed = importlib.util.find_spec(module) is not None
+    except Exception:                                        # noqa: BLE001
+        installed = False
+
+    if not installed:
+        return f"{pip_name} 가 없습니다:\n    {sys.executable} -m pip install {pip_name}"
+    return (
+        f"{pip_name} 는 설치돼 있는데 불러오지 못했습니다.\n"
+        f"  실제 오류: {type(exc).__name__}: {exc}\n\n"
+        f"전체 원인을 보려면:  {sys.executable} diag.py"
+    )
+
+
 # --------------------------------------------------------------------------
 # 오디오 입력 장치
 # --------------------------------------------------------------------------
@@ -236,6 +254,130 @@ class Capture:
                 pass
 
 
+class SoundcardCapture:
+    """soundcard 라이브러리로 WASAPI loopback 을 직접 연다.
+
+    sounddevice 가 쓰는 PortAudio 빌드에 loopback 장치가 없을 때의 대안 경로.
+    콜백이 아니라 블로킹 read 라서 전용 스레드에서 돌린다.
+    """
+
+    def __init__(self, spec, out_queue: "queue.Queue[np.ndarray]", samplerate: int = 48000):
+        try:
+            import soundcard as sc
+        except Exception as exc:                             # noqa: BLE001
+            raise SystemExit(_import_help("soundcard", "soundcard", exc)) from exc
+
+        self.sc = sc
+        self.q = out_queue
+        self.mic = _pick_soundcard_mic(sc, spec)
+        self.native_sr = samplerate
+        self.channels = 2
+        self.block = int(samplerate * FRAME_MS / 1000)
+        self.label = f"[soundcard] {self.mic.name}"
+        self.error: Exception | None = None
+        self._resampler = _make_resampler()
+        self._stop = threading.Event()
+        self._ready = threading.Event()
+        self.thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
+        self._ready.wait(timeout=5.0)                        # 열자마자 나는 오류를 먼저 잡는다
+        if self.error is not None:
+            raise SystemExit(f"soundcard 로 소리를 열지 못했습니다: {self.error}")
+
+    def _loop(self) -> None:
+        try:
+            with self.mic.recorder(samplerate=self.native_sr,
+                                   channels=self.channels,
+                                   blocksize=self.block) as rec:
+                self._ready.set()
+                while not self._stop.is_set():
+                    data = rec.record(numframes=self.block)
+                    if data is None or len(data) == 0:
+                        continue
+                    data = np.asarray(data, dtype=np.float32)
+                    mono = data.mean(axis=1) if data.ndim > 1 and data.shape[1] > 1 else data.reshape(-1)
+                    self.q.put(self._resampler(mono, self.native_sr))
+        except Exception as exc:                             # noqa: BLE001
+            self.error = exc
+            self._ready.set()
+
+    def stop(self) -> None:
+        self._stop.set()
+
+
+def _pick_soundcard_mic(sc, spec):
+    """soundcard 에서 쓸 입력(가능하면 loopback)을 고른다."""
+    mics = sc.all_microphones(include_loopback=True)
+    loops = [m for m in mics if getattr(m, "isloopback", False)]
+
+    if spec is not None:
+        needle = str(spec).lower()
+        for mic in loops + mics:
+            if needle in mic.name.lower():
+                return mic
+        names = "\n".join(f"    {m.name}" for m in mics) or "    (없음)"
+        raise SystemExit(f"'{spec}' 와 맞는 장치가 없습니다. 사용 가능한 장치:\n{names}")
+
+    try:                                                     # 지금 소리가 나가는 스피커와 짝을 맞춘다
+        speaker = sc.default_speaker().name.lower()
+        for mic in loops:
+            name = mic.name.lower()
+            if name == speaker or speaker in name or name in speaker:
+                return mic
+    except Exception:                                        # noqa: BLE001
+        pass
+
+    if loops:
+        return loops[0]
+    raise SystemExit(
+        "soundcard 에서도 loopback 장치를 찾지 못했습니다.\n"
+        "Windows 소리 설정에서 '스테레오 믹스' 를 켜거나 VB-CABLE 설치가 필요합니다."
+    )
+
+
+def make_capture(args, audio_q: "queue.Queue[np.ndarray]"):
+    """백엔드를 골라 캡처 객체를 만들고 시작한다. (capture, 표시이름) 반환."""
+    backend = args.backend
+    sd = None
+    if backend in ("auto", "sounddevice"):
+        try:
+            import sounddevice as sd_mod
+
+            sd = sd_mod
+        except Exception as exc:                             # noqa: BLE001
+            if backend == "sounddevice":
+                raise SystemExit(_import_help("sounddevice", "sounddevice", exc)) from exc
+
+    if backend == "soundcard":
+        capture = SoundcardCapture(args.device, audio_q)
+        capture.start()
+        return capture, capture.label
+
+    # auto: Windows 인데 PortAudio 가 loopback 장치를 못 주면 soundcard 로 돌아간다
+    if (backend == "auto" and platform.system() == "Windows"
+            and (sd is None or not loopback_inputs(sd))):
+        print("[audio] PortAudio 에 loopback 장치가 없어 soundcard 경로를 씁니다.")
+        try:
+            capture = SoundcardCapture(args.device, audio_q)
+            capture.start()
+            return capture, capture.label
+        except SystemExit as exc:
+            if sd is None:
+                raise
+            print(f"[audio] soundcard 실패 -> sounddevice 로 계속\n  {exc}", file=sys.stderr)
+
+    if sd is None:
+        raise SystemExit(_import_help("sounddevice", "sounddevice", RuntimeError("불러오기 실패")))
+
+    device, extra, label = resolve_device(sd, args.device)
+    capture = Capture(sd, device, extra, audio_q)
+    capture.start()
+    return capture, f"{label}  ({capture.native_sr} Hz / {capture.channels}ch)"
+
+
 def _make_resampler():
     try:
         from math import gcd
@@ -383,10 +525,8 @@ class Recognizer:
                  language: str | None, beam_size: int):
         try:
             from faster_whisper import WhisperModel
-        except ImportError as exc:
-            raise SystemExit(
-                "faster-whisper 가 없습니다:\n    pip install faster-whisper"
-            ) from exc
+        except Exception as exc:                             # noqa: BLE001
+            raise SystemExit(_import_help("faster_whisper", "faster-whisper", exc)) from exc
 
         if device == "auto":
             device = "cuda" if _cuda_available() else "cpu"
@@ -474,10 +614,8 @@ class GoogleTranslator:
     def __init__(self, src: str, dst: str):
         try:
             from deep_translator import GoogleTranslator as _G
-        except ImportError as exc:
-            raise SystemExit(
-                "deep-translator 가 없습니다:\n    pip install deep-translator"
-            ) from exc
+        except Exception as exc:                             # noqa: BLE001
+            raise SystemExit(_import_help("deep_translator", "deep-translator", exc)) from exc
         self._engine = _G(source=src, target=dst)
 
     def translate(self, text: str) -> str:
@@ -528,10 +666,8 @@ class ClaudeTranslator:
     def __init__(self, src: str, dst: str, model: str = "claude-opus-5", context: int = 3):
         try:
             import anthropic
-        except ImportError as exc:
-            raise SystemExit(
-                "anthropic 이 없습니다:\n    pip install anthropic"
-            ) from exc
+        except Exception as exc:                             # noqa: BLE001
+            raise SystemExit(_import_help("anthropic", "anthropic", exc)) from exc
         self.client = anthropic.Anthropic(timeout=20.0, max_retries=1)
         self.model = model
         self.history: deque[tuple[str, str]] = deque(maxlen=context)
@@ -714,11 +850,8 @@ def run(args) -> int:
         list_devices(sd)
         return 0
 
-    device, extra, label = resolve_device(sd, args.device)
-    print(f"[audio] 입력: {label}")
-
     if args.calibrate:
-        return _calibrate(sd, device, extra)
+        return _calibrate(args)
 
     recognizer = Recognizer(args.model, args.device_type, args.compute_type,
                             None if args.src == "auto" else args.src, args.beam_size)
@@ -731,9 +864,8 @@ def run(args) -> int:
     out_q: queue.Queue[tuple[str, str]] = queue.Queue()
     stop = threading.Event()
 
-    capture = Capture(sd, device, extra, audio_q)
-    capture.start()
-    print(f"[audio] {capture.native_sr} Hz / {capture.channels}ch -> 16000 Hz mono")
+    capture, label = make_capture(args, audio_q)
+    print(f"[audio] 입력: {label} -> 16000 Hz mono")
 
     segmenter = Segmenter(
         silence_ms=args.silence, min_speech_ms=args.min_speech,
@@ -862,11 +994,11 @@ def _overlay_loop(out_q, stop, args):
     stop.set()
 
 
-def _calibrate(sd, device, extra) -> int:
+def _calibrate(args) -> int:
     """지금 들어오는 소리의 크기를 보여줘 --threshold 를 정하도록 돕는다."""
     audio_q: queue.Queue[np.ndarray] = queue.Queue()
-    capture = Capture(sd, device, extra, audio_q)
-    capture.start()
+    capture, label = make_capture(args, audio_q)
+    print(f"[audio] 입력: {label}\n")
     segmenter = Segmenter()
     print("10초 동안 레벨을 측정합니다. 영상을 평소 볼륨으로 재생하세요.\n")
     end = time.time() + 10
@@ -898,6 +1030,9 @@ def parse_args(argv=None):
     audio.add_argument("--list-devices", action="store_true", help="오디오 장치 목록만 출력")
     audio.add_argument("--device", help="장치 번호 또는 이름 일부 (미지정 시 자동 탐지)")
     audio.add_argument("--calibrate", action="store_true", help="입력 레벨 10초 측정")
+    audio.add_argument("--backend", default="auto",
+                       choices=["auto", "sounddevice", "soundcard"],
+                       help="오디오 캡처 방식. auto 면 Windows 에서 필요할 때 soundcard 로 전환")
 
     asr = parser.add_argument_group("음성 인식")
     asr.add_argument("--model", default="small",

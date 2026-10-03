@@ -22,6 +22,7 @@ PACKAGES = [                        # (import 이름, pip 이름, 필수 여부,
     ("scipy", "scipy", True, "리샘플링"),
     ("faster_whisper", "faster-whisper", True, "음성 인식"),
     ("deep_translator", "deep-translator", False, "번역 (--translator google)"),
+    ("soundcard", "soundcard", False, "Windows loopback 대체 경로"),
     ("anthropic", "anthropic", False, "번역 (--translator claude)"),
     ("transformers", "transformers", False, "번역 (--translator local)"),
 ]

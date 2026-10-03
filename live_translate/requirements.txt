@@ -7,6 +7,10 @@ faster-whisper>=1.0.0   # 음성 인식
 # 번역 백엔드 - 하나만 있으면 됩니다 (기본값은 google)
 deep-translator>=1.11.4 # --translator google
 
+# Windows 에서 PortAudio 가 loopback 장치를 못 줄 때 쓰는 대체 캡처 경로
+# (--backend soundcard, auto 일 때 자동 전환)
+soundcard>=0.4.2 ; sys_platform == 'win32'
+
 # --translator claude 를 쓸 때
 # anthropic>=1.0
 
