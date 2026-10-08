@@ -9,15 +9,24 @@
 
 ---
 
-## 1. 가장 빠른 시작 (3분)
+## 1. 가장 빠른 시작
 
+**윈도우: `setup.bat` 더블클릭 → `run.bat` 더블클릭.** 끝입니다.
+
+맥 / 리눅스:
 ```bash
-pip install numpy sounddevice scipy faster-whisper deep-translator
-python live_sub.py --src ja --dst ko
+./setup.sh      # 한 번만
+./run.sh
 ```
 
-Windows면 `run.bat` 더블클릭으로도 됩니다.
-**macOS는 먼저 아래 2번의 BlackHole 설정을 마쳐야 합니다** — 안 하면 소리를 잡지 못합니다.
+`setup.bat` / `setup.sh` 가 필요한 패키지와 GPU 가속 라이브러리까지 알아서 깔고 점검합니다.
+**macOS는 추가로 아래 2번의 BlackHole 설정이 필요합니다** — 안 하면 소리를 잡지 못합니다.
+
+직접 깔고 싶으면:
+```bash
+pip install numpy sounddevice soundcard scipy faster-whisper transformers sentencepiece torch
+python live_sub.py --src ja --dst ko --translator local
+```
 
 첫 실행 때 Whisper 모델(`small`, 약 500 MB)을 한 번 내려받습니다. 그 뒤로는 바로 뜹니다.
 자막 창은 **드래그로 이동, 휠로 글자 크기, 우클릭으로 메뉴, Esc로 종료**입니다.
